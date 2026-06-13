@@ -75,8 +75,8 @@ export function ActiviteMensuelle({ loading, activity }) {
         ) : monthlyData.length < 2 ? (
           <EmptyState
             variant="insufficient"
-            title="Pas assez de données pour afficher la tendance"
-            description="Le graphique apparaîtra dès que plusieurs mois d'activité seront enregistrés."
+            title="Données insuffisantes"
+            description={`Données disponibles à partir du mois prochain.`}
           />
         ) : (
           <ResponsiveContainer width="100%" height="100%">

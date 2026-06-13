@@ -93,7 +93,7 @@ export default function Dashboard() {
       </div>
 
       {/* Sections Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 lg:grid-rows-2 gap-6 flex-1 min-h-0">
+      <div className="flex flex-col lg:grid lg:grid-cols-5 lg:grid-rows-2 gap-6 flex-1 min-h-0 items-stretch">
         <ActiviteMensuelle loading={loading} activity={activity} />
         <RepartitionStatut loading={loading} stats={stats} />
         <DemandesParType loading={loading} stats={stats} />

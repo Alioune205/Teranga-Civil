@@ -97,8 +97,8 @@ export function RepartitionStatut({ loading, stats }) {
             description="Aucune demande n'a été enregistrée pour le moment."
           />
         ) : (
-          <div className="relative flex flex-col sm:flex-row items-center justify-center h-full gap-8">
-            <div className="relative w-[180px] h-[180px] flex-shrink-0">
+          <div className="relative flex flex-col sm:flex-row items-center justify-center h-full gap-8 overflow-hidden">
+            <div className="relative w-[140px] h-[140px] max-h-[140px] flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%" aspect={1}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={70} paddingAngle={3} dataKey="value" stroke="none">
