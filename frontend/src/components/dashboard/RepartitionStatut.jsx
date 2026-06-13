@@ -81,7 +81,7 @@ export function RepartitionStatut({ loading, stats }) {
   };
 
   return (
-    <Card className="lg:col-span-2 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 overflow-hidden h-full flex flex-col">
+    <Card className="lg:col-span-2 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 overflow-hidden h-full flex flex-col min-h-[320px]">
       <CardHeader className="p-0 pb-4 flex-shrink-0">
         <CardTitle className="text-base font-semibold text-secondary dark:text-white">
           Répartition par statut
@@ -97,9 +97,9 @@ export function RepartitionStatut({ loading, stats }) {
             description="Aucune demande n'a été enregistrée pour le moment."
           />
         ) : (
-          <div className="relative flex flex-col sm:flex-row items-center justify-around h-full gap-4">
-            <div className="relative w-[150px] h-[150px] flex-shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
+          <div className="relative flex flex-col sm:flex-row items-center justify-center h-full gap-8">
+            <div className="relative w-[180px] h-[180px] flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%" aspect={1}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={70} paddingAngle={3} dataKey="value" stroke="none">
                     {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}

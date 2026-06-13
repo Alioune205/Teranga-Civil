@@ -107,10 +107,10 @@ export function Sidebar({ open, setOpen, unreadCount }) {
                       key={item.name}
                       to={item.href}
                       onClick={() => setOpen(false)}
-                      className={`sidebar-link relative ${isActive ? 'active' : ''}`}
+                      className={`sidebar-link relative flex items-center gap-3 ${isActive ? 'active' : ''}`}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="flex-1">{item.name}</span>
+                      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis text-[0.875rem]">{item.name}</span>
                       {item.href === '/notifications' && unreadCount > 0 && (
                         <span
                           className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-error text-[#F0F4FF] text-[11px] font-bold px-1.5 shadow-[0_0_8px_rgba(248,113,113,0.5)] animate-pulse"

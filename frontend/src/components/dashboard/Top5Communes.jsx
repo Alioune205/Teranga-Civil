@@ -18,7 +18,7 @@ export function Top5Communes({ loading, stats }) {
   }, [topCommunes]);
 
   return (
-    <Card className="lg:col-span-2 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 overflow-hidden h-full flex flex-col">
+    <Card className="lg:col-span-2 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 overflow-hidden h-full flex flex-col min-h-[320px]">
       <CardHeader className="p-0 pb-4 flex-shrink-0">
         <CardTitle className="text-base font-semibold text-secondary dark:text-white">
           Top 5 Communes

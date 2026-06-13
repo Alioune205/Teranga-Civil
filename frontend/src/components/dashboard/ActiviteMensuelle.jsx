@@ -55,7 +55,7 @@ export function ActiviteMensuelle({ loading, activity }) {
   }, [activity]);
 
   return (
-    <Card className="lg:col-span-3 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 overflow-hidden h-full flex flex-col">
+    <Card className="lg:col-span-3 lg:row-span-1 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 overflow-hidden h-full flex flex-col min-h-[320px]">
       <CardHeader className="p-0 pb-4 flex-shrink-0">
         <CardTitle className="text-base font-semibold text-secondary dark:text-white">
           Activité mensuelle
@@ -71,6 +71,12 @@ export function ActiviteMensuelle({ loading, activity }) {
             description="Créez votre première demande pour générer des statistiques détaillées."
             actionLabel="Nouvelle demande"
             onAction={() => navigate('/dossiers')}
+          />
+        ) : monthlyData.length < 2 ? (
+          <EmptyState
+            variant="insufficient"
+            title="Pas assez de données pour afficher la tendance"
+            description="Le graphique apparaîtra dès que plusieurs mois d'activité seront enregistrés."
           />
         ) : (
           <ResponsiveContainer width="100%" height="100%">

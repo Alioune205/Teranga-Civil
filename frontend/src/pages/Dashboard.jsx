@@ -83,7 +83,7 @@ export default function Dashboard() {
       </div>
 
       {/* Section A — 6 KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6 shrink-0">
         <KPICard title="Total demandes" value={stats?.total_dossiers ?? 0} icon={FileText} iconColorClass="text-blue-700 bg-blue-50 dark:bg-blue-900/20" criticalStatus="info" loading={loading} onClick={() => navigate('/dossiers')} />
         <KPICard title="En attente" value={(stats?.status_counts?.submitted ?? 0) + (stats?.status_counts?.draft ?? 0)} icon={Clock} iconColorClass="text-amber-500 bg-amber-50 dark:bg-amber-900/20" criticalStatus="warning" loading={loading} onClick={() => navigate('/dossiers?status=submitted')} />
         <KPICard title="En traitement" value={(stats?.status_counts?.in_review ?? 0) + (stats?.status_counts?.generated ?? 0)} icon={Eye} iconColorClass="text-blue-500 bg-blue-50 dark:bg-blue-900/20" criticalStatus="info" loading={loading} onClick={() => navigate('/dossiers?status=in_review')} />
@@ -93,7 +93,7 @@ export default function Dashboard() {
       </div>
 
       {/* Sections Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 lg:grid-rows-2 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-5 lg:grid-rows-2 gap-6 flex-1 min-h-0">
         <ActiviteMensuelle loading={loading} activity={activity} />
         <RepartitionStatut loading={loading} stats={stats} />
         <DemandesParType loading={loading} stats={stats} />
