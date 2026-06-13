@@ -232,6 +232,7 @@ REST_FRAMEWORK = {
         'user': '1000/hour',
         'login': '5/minute', # Anti brute-force pour le login
         'otp': '3/minute',   # Anti-spam pour l'envoi d'OTP
+        'register': '5/hour', # Anti-spam pour l'inscription
     },
 
     # Schema

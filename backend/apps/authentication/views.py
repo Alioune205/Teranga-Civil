@@ -528,3 +528,32 @@ class SuperAdminPasswordResetView(GenericAPIView):
 
         return success_response(message="Votre mot de passe a été réinitialisé avec succès et toutes les sessions actives ont été déconnectées.")
 
+
+from .serializers import ChangePasswordSerializer
+
+class ChangePasswordView(GenericAPIView):
+    """
+    POST /api/auth/change-password/
+    
+    Changer le mot de passe de l'utilisateur connecté.
+    """
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Changer le mot de passe',
+        responses={200: OpenApiResponse(description='Mot de passe modifié avec succès')}
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data['old_password']):
+            return error_response(message="L'ancien mot de passe est incorrect.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return success_response(message="Mot de passe modifié avec succès.")

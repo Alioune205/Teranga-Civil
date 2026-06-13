@@ -196,3 +196,8 @@ class SuperAdminPasswordResetSerializer(serializers.Serializer):
         validators=[validate_strong_password]
     )
 
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
+

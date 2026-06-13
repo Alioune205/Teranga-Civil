@@ -8,6 +8,7 @@ from .base import *  # noqa: F401,F403
 # ==============================================================================
 
 DEBUG = True
+ALLOWED_HOSTS = ['*']
 
 # ==============================================================================
 # DATABASE — SQLite fallback for development
@@ -40,6 +41,20 @@ if DB_NAME:
 # ==============================================================================
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_HEADERS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-platform',
+    'x-app-version',
+]
 
 # ==============================================================================
 # EMAIL — Console backend for development
@@ -51,10 +66,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # THROTTLING — Relaxed for development
 # ==============================================================================
 
-REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'].update({
     'anon': '1000/hour',
     'user': '10000/hour',
-}
+})
 
 # ==============================================================================
 # LOGGING
