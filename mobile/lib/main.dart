@@ -25,8 +25,11 @@ void main() async {
     ),
   );
 
-  // Bypass temporaire pour que vous puissiez voir votre page d'accueil directement
-  final initialRoute = AppRoutes.home;
+  // VÃ©rifier le token avant runApp â€” dÃ©marrage direct sans SplashScreen
+  const storage = FlutterSecureStorage();
+  final token = await storage.read(key: 'auth_token');
+  final initialRoute =
+      (token != null && token.isNotEmpty) ? AppRoutes.home : AppRoutes.welcome;
 
   runApp(ProviderScope(
     child: TerangaCivilApp(initialRoute: initialRoute),
