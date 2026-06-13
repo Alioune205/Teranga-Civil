@@ -829,7 +829,7 @@ def _draw_pdf_content(p, width, height, dossier, officier, timbre_ref,
     lieu_naissance = metadata.get('lieu_naissance')
     sexe = metadata.get('sexe')
 
-    if not dossier.is_for_third_party and citizen:
+    if not dossier.metadata.get('is_for_third_party') and citizen:
         prenoms_enfant = prenoms_enfant or citizen.first_name
         nom_enfant = nom_enfant or citizen.last_name
         if hasattr(citizen, 'profile'):

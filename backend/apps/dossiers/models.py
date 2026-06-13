@@ -148,3 +148,23 @@ class DossierComment(TimeStampedModel):
 
     def __str__(self):
         return f'Commentaire de {self.author.full_name} sur {self.dossier.reference}'
+
+
+class RegistreCivil(TimeStampedModel):
+    numero_registre = models.CharField(max_length=50, verbose_name='Numéro de registre')
+    annee_registre = models.IntegerField(verbose_name='Année de registre')
+    type_acte = models.CharField(max_length=30, choices=Dossier.Type.choices, verbose_name='Type d\'acte')
+    nom_complet_personne = models.CharField(max_length=255, verbose_name='Nom complet sur le registre')
+    date_naissance_personne = models.DateField(verbose_name='Date de naissance sur le registre')
+    conjoint_nom_complet = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nom complet du conjoint')
+    commune = models.ForeignKey('communes.Commune', on_delete=models.CASCADE, related_name='registres', verbose_name='Commune de déclaration')
+
+    class Meta:
+        verbose_name = 'Registre Civil (Simulation)'
+        verbose_name_plural = 'Registres Civils (Simulation)'
+        ordering = ['-annee_registre', 'numero_registre']
+        unique_together = [('numero_registre', 'annee_registre', 'commune', 'type_acte')]
+
+    def __str__(self):
+        return f'{self.numero_registre}/{self.annee_registre} - {self.nom_complet_personne}'
+

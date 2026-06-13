@@ -190,7 +190,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         else:
             # Demande personnelle : vérifier que le nom correspond à l'utilisateur connecté
             user_nom = user.full_name.lower().strip()
-            registre_nom = f"{registre.prenoms_enfant} {registre.nom_enfant}".lower().strip()
+            registre_nom = registre.nom_complet_personne.lower().strip()
             
             # Simple vérification (dans la vraie vie on utilise des algorithmes phonétiques)
             if user_nom not in registre_nom and registre_nom not in user_nom:

@@ -38,7 +38,7 @@ class PDFGenerationTests(TestCase):
     def _create_dossier(self, dossier_type, metadata):
         return Dossier.objects.create(
             type=dossier_type,
-            status=Dossier.Status.VALIDATED,
+            status=Dossier.Status.APPROVED,
             citizen=self.citizen,
             commune=self.commune,
             metadata=metadata,

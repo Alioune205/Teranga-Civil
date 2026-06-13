@@ -52,10 +52,8 @@ class BusinessRulesTests(APITestCase):
             annee_registre=1990,
             commune=self.commune,
             type_acte=Dossier.Type.BIRTH_CERTIFICATE,
-            prenoms_enfant='Alioune',
-            nom_enfant='Sene',
+            nom_complet_personne='Alioune Sene',
             date_naissance_personne=date(1990, 1, 1),
-            lieu_naissance='Dakar'
         )
         
         self.registre_other = RegistreCivil.objects.create(
@@ -63,10 +61,8 @@ class BusinessRulesTests(APITestCase):
             annee_registre=1995,
             commune=self.commune,
             type_acte=Dossier.Type.BIRTH_CERTIFICATE,
-            prenoms_enfant='Fatou',
-            nom_enfant='Ndiaye',
+            nom_complet_personne='Fatou Ndiaye',
             date_naissance_personne=date(1995, 2, 2),
-            lieu_naissance='Thies'
         )
 
         self.url = '/api/dossiers/verify-registry/'
@@ -77,7 +73,7 @@ class BusinessRulesTests(APITestCase):
         data = {
             'numero_registre': '100',
             'annee_registre': 1990,
-            'commune': self.commune.id,
+            'commune': self.commune.code,
             'type_acte': Dossier.Type.BIRTH_CERTIFICATE,
             'is_for_third_party': False
         }
@@ -91,7 +87,7 @@ class BusinessRulesTests(APITestCase):
         data = {
             'numero_registre': '101',
             'annee_registre': 1995,
-            'commune': self.commune.id,
+            'commune': self.commune.code,
             'type_acte': Dossier.Type.BIRTH_CERTIFICATE,
             'is_for_third_party': False
         }
@@ -105,7 +101,7 @@ class BusinessRulesTests(APITestCase):
         data = {
             'numero_registre': '101',
             'annee_registre': 1995,
-            'commune': self.commune.id,
+            'commune': self.commune.code,
             'type_acte': Dossier.Type.BIRTH_CERTIFICATE,
             'is_for_third_party': True
         }
@@ -118,7 +114,7 @@ class BusinessRulesTests(APITestCase):
         data = {
             'numero_registre': '101',
             'annee_registre': 1995,
-            'commune': self.commune.id,
+            'commune': self.commune.code,
             'type_acte': Dossier.Type.BIRTH_CERTIFICATE,
             'is_for_third_party': True
         }
@@ -132,7 +128,7 @@ class BusinessRulesTests(APITestCase):
         data = {
             'numero_registre': '999',
             'annee_registre': 2000,
-            'commune': self.commune.id,
+            'commune': self.commune.code,
             'type_acte': Dossier.Type.BIRTH_CERTIFICATE,
             'is_for_third_party': False
         }

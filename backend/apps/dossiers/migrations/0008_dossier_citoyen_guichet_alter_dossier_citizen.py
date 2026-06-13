@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('etat_civil', '0011_alter_attributiondossier_options_and_more'),
+        ('etat_civil', '0002_citoyen_alter_attributiondossier_options_and_more'),
         ('dossiers', '0007_remove_registrecivil_nom_complet_personne_and_more'),
     ]
 
