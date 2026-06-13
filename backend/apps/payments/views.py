@@ -17,16 +17,34 @@ class InitiatePaymentView(APIView):
     
     def post(self, request):
         from django.utils.crypto import get_random_string
+        from apps.dossiers.models import Dossier
         
         # Récupérer les données envoyées par le mobile
         dossier_id = request.data.get('dossier_id')
         method = request.data.get('method', 'wave')
         phone = request.data.get('phone', 'N/A')
         
+        AMOUNT_MAPPING = {
+            Dossier.Type.BIRTH_CERTIFICATE: 500.00,
+            Dossier.Type.DEATH_CERTIFICATE: 500.00,
+            Dossier.Type.MARRIAGE_CERTIFICATE: 1000.00,
+            Dossier.Type.RESIDENCE_CERTIFICATE: 500.00,
+            Dossier.Type.OTHER: 500.00,
+        }
+        
+        amount = 500.00
+        dossier = None
+        if dossier_id:
+            try:
+                dossier = Dossier.objects.get(id=dossier_id)
+                amount = AMOUNT_MAPPING.get(dossier.type, 500.00)
+            except Dossier.DoesNotExist:
+                pass
+        
         # Simuler la création d'une vraie transaction en base de données
         tx = PaymentTransaction.objects.create(
             reference=f"TX_{get_random_string(8).upper()}",
-            amount=500.00,
+            amount=amount,
             currency='XOF',
             payment_type=method,
             status='success', # On force le succès pour la simulation
@@ -36,30 +54,25 @@ class InitiatePaymentView(APIView):
         )
         
         # Mise à jour du statut du dossier à 'soumis' (payé)
-        from apps.dossiers.models import Dossier
-        if dossier_id:
-            try:
-                dossier = Dossier.objects.get(id=dossier_id)
-                dossier.status = Dossier.Status.SUBMITTED
-                from django.utils import timezone
-                dossier.submitted_at = timezone.now()
-                dossier.save(update_fields=['status', 'submitted_at'])
-                
-                # --- Envoi du signal Temps Réel (WebSockets) ---
-                from channels.layers import get_channel_layer
-                from asgiref.sync import async_to_sync
-                from apps.dossiers.serializers import DossierDetailSerializer
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    'admin_dashboard',
-                    {
-                        'type': 'dashboard_update',
-                        'message': 'new_dossier',
-                        'data': DossierDetailSerializer(dossier).data
-                    }
-                )
-            except Dossier.DoesNotExist:
-                pass
+        if dossier:
+            dossier.status = Dossier.Status.SUBMITTED
+            from django.utils import timezone
+            dossier.submitted_at = timezone.now()
+            dossier.save(update_fields=['status', 'submitted_at'])
+            
+            # --- Envoi du signal Temps Réel (WebSockets) ---
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.dossiers.serializers import DossierDetailSerializer
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'admin_dashboard',
+                {
+                    'type': 'dashboard_update',
+                    'message': 'new_dossier',
+                    'data': DossierDetailSerializer(dossier).data
+                }
+            )
         
         # Réponse attendue par le mobile
         return success_response(
@@ -183,6 +196,18 @@ class RegisterGuichetPaymentView(APIView):
             dossier = Dossier.objects.get(id=dossier_id)
         except Dossier.DoesNotExist:
             return error_response(message="Dossier introuvable.", status_code=404)
+
+        # Validation du montant
+        AMOUNT_MAPPING = {
+            Dossier.Type.BIRTH_CERTIFICATE: 500.00,
+            Dossier.Type.DEATH_CERTIFICATE: 500.00,
+            Dossier.Type.MARRIAGE_CERTIFICATE: 1000.00,
+            Dossier.Type.RESIDENCE_CERTIFICATE: 500.00,
+            Dossier.Type.OTHER: 500.00,
+        }
+        expected_amount = AMOUNT_MAPPING.get(dossier.type, 500.00)
+        if float(amount) < expected_amount:
+            return error_response(message=f"Le montant minimum pour ce type de dossier est de {expected_amount} XOF.", status_code=400)
 
         if payment_type in ['wave', 'orange_money', 'free_money'] and not transaction_reference:
             return error_response(message=f"La référence de transaction est obligatoire pour le mode de paiement {payment_type}.", status_code=400)

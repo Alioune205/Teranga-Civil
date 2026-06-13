@@ -98,6 +98,71 @@ class DossierViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         dossier = serializer.save()
         
+        # --- NOUVEAU : Enrichissement via RegistreCivil ---
+        numero = dossier.metadata.get('numero_registre')
+        annee = dossier.metadata.get('annee_registre')
+        
+        if numero and annee:
+            try:
+                registre = RegistreCivil.objects.get(
+                    numero_registre=numero,
+                    annee_registre=annee,
+                    commune=dossier.commune,
+                    type_acte=dossier.type
+                )
+                
+                champs_a_copier = {
+                    'nom_complet_personne': 'nom_complet_personne',
+                    'date_naissance_personne': 'date_naissance_personne',
+                    'conjoint_nom_complet': 'conjoint_nom_complet',
+                    'nom_pere': 'nom_pere',
+                    'nom_mere': 'nom_mere',
+                    'sexe': 'sexe',
+                    'lieu_naissance': 'lieu_naissance',
+                    'profession_pere': 'profession_pere',
+                    'profession_mere': 'profession_mere'
+                }
+                
+                metadata_mise_a_jour = False
+                for champ_reg, champ_meta in champs_a_copier.items():
+                    valeur_registre = getattr(registre, champ_reg, None)
+                    if valeur_registre is not None and valeur_registre != '':
+                        # Normalisation des dates (ex: DateField vers string)
+                        valeur_str = str(valeur_registre) if not hasattr(valeur_registre, 'isoformat') else valeur_registre.isoformat()
+                        
+                        valeur_citoyen = dossier.metadata.get(champ_meta)
+                        if not valeur_citoyen:
+                            # Champ vide chez le citoyen, on complète
+                            dossier.metadata[champ_meta] = valeur_str
+                            metadata_mise_a_jour = True
+                        elif str(valeur_citoyen) != valeur_str:
+                            # Divergence
+                            import logging
+                            logger = logging.getLogger('audit')
+                            logger.warning(
+                                f"Divergence RegistreCivil/Citoyen pour le dossier {dossier.reference}. "
+                                f"Champ: {champ_meta}. Citoyen: {valeur_citoyen}. Registre: {valeur_str}."
+                            )
+                            # Log détaillé
+                            from apps.audit_logs.models import AuditLog
+                            AuditLog.log(
+                                user=request.user,
+                                action=AuditLog.Action.UPDATE,
+                                resource_type='dossier_divergence',
+                                resource_id=dossier.id,
+                                details={
+                                    'field': champ_meta,
+                                    'citizen_value': valeur_citoyen,
+                                    'registry_value': valeur_str
+                                }
+                            )
+                
+                if metadata_mise_a_jour:
+                    dossier.save(update_fields=['metadata'])
+            
+            except RegistreCivil.DoesNotExist:
+                pass
+        
         # --- NOUVEAU : Envoi du signal Temps Réel (WebSockets) ---
         try:
             from channels.layers import get_channel_layer
@@ -158,7 +223,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         summary="Vérifier l'existence d'un acte dans le Registre Civil",
         description="Vérifie si le numéro et l'année existent. Valide aussi la correspondance du nom ou de la CNI.",
         responses={
-            200: OpenApiResponse(description='Acte trouvé et vérifié. Veuillez demander la date de naissance pour confirmer.'),
+            200: OpenApiResponse(description='Acte trouvé et vérifié.'),
             400: OpenApiResponse(description='Acte non trouvé ou non correspondant.'),
         },
     )
@@ -213,7 +278,7 @@ class DossierViewSet(viewsets.ModelViewSet):
                 )
 
         return success_response(
-            message='Acte trouvé. Veuillez fournir la date de naissance pour valider la demande.'
+            message='Acte trouvé. Vous pouvez continuer votre demande.'
         )
 
     # =====================================================

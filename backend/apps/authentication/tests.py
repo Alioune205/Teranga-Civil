@@ -73,3 +73,32 @@ class AuthenticationTests(TestCase):
         # Check tokens returned
         self.assertIn('access', response.data.get('data', {}))
         self.assertIn('refresh', response.data.get('data', {}))
+
+    def test_double_register_empty_phone(self):
+        data1 = {
+            "first_name": "Test1",
+            "last_name": "User1",
+            "email": "testuser1@terangacivil.sn",
+            "password": "StrongPassword123!",
+            "password_confirm": "StrongPassword123!",
+            "phone": ""
+        }
+        
+        response1 = self.client.post('/api/v1/auth/register/', data1, format='json')
+        if response1.status_code == 404:
+            response1 = self.client.post('/api/auth/register/', data1, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        data2 = {
+            "first_name": "Test2",
+            "last_name": "User2",
+            "email": "testuser2@terangacivil.sn",
+            "password": "StrongPassword123!",
+            "password_confirm": "StrongPassword123!",
+            "phone": ""
+        }
+        
+        response2 = self.client.post('/api/v1/auth/register/', data2, format='json')
+        if response2.status_code == 404:
+            response2 = self.client.post('/api/auth/register/', data2, format='json')
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)

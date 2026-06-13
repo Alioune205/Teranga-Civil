@@ -168,6 +168,14 @@ class RegistreCivil(TimeStampedModel):
     date_naissance_personne = models.DateField(verbose_name='Date de naissance sur le registre')
     conjoint_nom_complet = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nom complet du conjoint')
     commune = models.ForeignKey('communes.Commune', on_delete=models.CASCADE, related_name='registres', verbose_name='Commune de déclaration')
+    
+    # Nouveaux champs pour enrichissement des certificats
+    nom_pere = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nom du père')
+    nom_mere = models.CharField(max_length=255, blank=True, null=True, verbose_name='Nom de la mère')
+    sexe = models.CharField(max_length=1, choices=[('M', 'Masculin'), ('F', 'Féminin')], blank=True, null=True, verbose_name='Sexe')
+    lieu_naissance = models.CharField(max_length=255, blank=True, null=True, verbose_name='Lieu de naissance')
+    profession_pere = models.CharField(max_length=255, blank=True, null=True, verbose_name='Profession du père')
+    profession_mere = models.CharField(max_length=255, blank=True, null=True, verbose_name='Profession de la mère')
 
     class Meta:
         verbose_name = 'Registre Civil (Simulation)'

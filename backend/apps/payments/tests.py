@@ -85,6 +85,17 @@ class PaymentGuichetTests(TestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_register_guichet_payment_invalid_amount(self):
+        url = reverse('payment-guichet-register')
+        data = {
+            'dossier_id': str(self.dossier.id),
+            'amount': 300.00, # Moins que les 500 requis
+            'payment_type': 'cash',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("montant minimum", response.data.get('message', '').lower())
+
     def test_download_receipt_pdf(self):
         # Créer une transaction de paiement existante
         tx = PaymentTransaction.objects.create(

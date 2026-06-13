@@ -94,7 +94,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        """Get or update the current authenticated user's data."""
+        """
+        Gère les informations globales du compte utilisateur (email, nom, prénom, rôle).
+        À distinguer de `CitizenProfileViewSet.me` qui gère les informations métier spécifiques au citoyen (CNI, adresse).
+        """
         if request.method == 'GET':
             serializer = UserSerializer(request.user)
             return success_response(data=serializer.data)
@@ -158,7 +161,10 @@ class CitizenProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        """Get or update the current user's profile."""
+        """
+        Gère les informations spécifiques du profil citoyen (numéro CNI, date de naissance, adresse).
+        À distinguer de `UserViewSet.me` qui gère les informations globales du compte (email, mot de passe).
+        """
         try:
             profile = CitizenProfile.objects.select_related('user').get(user=request.user)
         except CitizenProfile.DoesNotExist:
