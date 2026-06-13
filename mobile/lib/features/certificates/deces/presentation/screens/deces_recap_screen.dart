@@ -100,12 +100,12 @@ class DecesRecapScreen extends ConsumerWidget {
                     _SectionHeader(
                       icon: Icons.person_off_outlined,
                       label: 'Défunt',
-                      color: AppColors.statusRed,
+                      color: AppColors.error,
                     ),
                     const SizedBox(height: 10),
                     RecapCard(
                       title: 'Informations du défunt',
-                      accentColor: AppColors.statusRed,
+                      accentColor: AppColors.error,
                       titleIcon: Icons.person_off_outlined,
                       fields: [
                         RecapField(
@@ -154,14 +154,14 @@ class DecesRecapScreen extends ConsumerWidget {
                           label: 'Lien avec le défunt',
                           value: formData['lien_parente'] as String,
                           icon: Icons.people_outline,
-                          valueColor: AppColors.statusBlue,
+                          valueColor: AppColors.info,
                         ),
                         RecapField(
                           label: 'Frais',
                           value: AppFormatters.amountFCFA(
                               AppConstants.decesFeesFCFA),
                           icon: Icons.payment_outlined,
-                          valueColor: AppColors.secondary,
+                          valueColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -174,7 +174,7 @@ class DecesRecapScreen extends ConsumerWidget {
                             ? Icons.article_outlined
                             : Icons.credit_card_outlined,
                         label: docLabel,
-                        color: AppColors.statusBlue,
+                        color: AppColors.info,
                       ),
                       const SizedBox(height: 10),
                       _DocThumb(
@@ -196,24 +196,24 @@ class DecesRecapScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.statusBlue.withValues(alpha: 0.07),
+                        color: AppColors.info.withValues(alpha: 0.07),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                             color:
-                                AppColors.statusBlue.withValues(alpha: 0.25)),
+                                AppColors.info.withValues(alpha: 0.25)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.info_outline,
-                              color: AppColors.statusBlue, size: 18),
+                              color: AppColors.info, size: 18),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Votre demande sera traitée par le centre d\'état civil '
                               'compétent. Un email de confirmation vous sera envoyé.',
                               style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.statusBlue),
+                                  color: AppColors.info),
                             ),
                           ),
                         ],
@@ -309,7 +309,7 @@ class _DocThumb extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: AppTextStyles.labelMedium)),
           const Icon(Icons.check_circle,
-              color: AppColors.secondary, size: 18),
+              color: AppColors.primary, size: 18),
         ],
       ),
     );

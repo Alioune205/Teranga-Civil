@@ -19,38 +19,38 @@ class StatusBadge extends StatelessWidget {
     switch (status) {
       case 'soumis':
         return _BadgeConfig(
-          color: AppColors.statusBlue,
+          color: AppColors.info,
           bgColor: AppColors.statusBlueLight,
           icon: Icons.upload_outlined,
         );
       case 'en_verification':
         return _BadgeConfig(
-          color: AppColors.statusAmber,
+          color: AppColors.warning,
           bgColor: AppColors.statusAmberLight,
           icon: Icons.search_outlined,
         );
       case 'valide':
         return _BadgeConfig(
-          color: AppColors.statusGreen,
+          color: AppColors.success,
           bgColor: AppColors.statusGreenLight,
           icon: Icons.check_circle_outline,
         );
       case 'pret':
         return _BadgeConfig(
-          color: AppColors.statusGreen,
+          color: AppColors.success,
           bgColor: AppColors.statusGreenLight,
           icon: Icons.download_outlined,
         );
       case 'rejete':
         return _BadgeConfig(
-          color: AppColors.statusRed,
+          color: AppColors.error,
           bgColor: AppColors.statusRedLight,
           icon: Icons.cancel_outlined,
         );
       case 'en_cours':
       default:
         return _BadgeConfig(
-          color: AppColors.statusAmber,
+          color: AppColors.warning,
           bgColor: AppColors.statusAmberLight,
           icon: Icons.hourglass_empty_outlined,
         );
@@ -108,7 +108,7 @@ class DossierProgressStepper extends StatelessWidget {
           return Expanded(
             child: Container(
               height: 2,
-              color: active ? AppColors.secondary : AppColors.border,
+              color: active ? AppColors.primary : AppColors.border,
             ),
           );
         }
@@ -135,7 +135,7 @@ class _StepDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = done || current ? AppColors.secondary : AppColors.border;
+    final color = done || current ? AppColors.primary : AppColors.border;
     return Column(
       children: [
         Container(
@@ -143,7 +143,7 @@ class _StepDot extends StatelessWidget {
           height: 16,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: done ? AppColors.secondary : AppColors.surface,
+            color: done ? AppColors.primary : AppColors.surface,
             border: Border.all(color: color, width: 2),
           ),
           child: done
@@ -155,7 +155,7 @@ class _StepDot extends StatelessWidget {
                         height: 6,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.secondary,
+                          color: AppColors.primary,
                         ),
                       ),
                     )
@@ -165,7 +165,7 @@ class _StepDot extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.caption.copyWith(
-            color: done || current ? AppColors.secondary : AppColors.textHint,
+            color: done || current ? AppColors.primary : AppColors.textHint,
             fontSize: 9,
           ),
         ),

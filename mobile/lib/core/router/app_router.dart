@@ -17,6 +17,7 @@ import '../../features/auth/presentation/screens/register_step4_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 
 // ── Certificates — Naissance
+import '../../features/certificates/naissance/presentation/screens/acte_naissance_form_screen.dart';
 import '../../features/certificates/naissance/presentation/screens/beneficiary_choice_screen.dart';
 import '../../features/certificates/naissance/presentation/screens/recap_self_screen.dart';
 import '../../features/certificates/naissance/presentation/screens/other_person_screen.dart';
@@ -40,6 +41,15 @@ import '../../features/dossiers/presentation/screens/dossier_detail_screen.dart'
 
 // ── Profile
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/personal_info_edit_screen.dart';
+import '../../features/profile/presentation/screens/profile_completion_screen.dart';
+
+import '../../features/documents/presentation/screens/documents_screen.dart';
+import '../../features/documents/presentation/screens/category_detail_screen.dart';
+import '../../features/documents/presentation/screens/drafts_screen.dart';
+
+// ── Assistant
+import '../../features/assistant/presentation/screens/assistant_screen.dart';
 
 /// Noms de routes — utiliser ces constantes partout (jamais de chaînes en dur)
 abstract class AppRoutes {
@@ -59,6 +69,7 @@ abstract class AppRoutes {
   static const profile = '/profile';
 
   // Naissance
+  static const acteNaissanceForm = '/certificates/acte-naissance/form';
   static const naissanceBeneficiary = '/certificates/naissance/beneficiary';
   static const naissanceRecapSelf = '/certificates/naissance/recap-self';
   static const naissanceOtherPerson = '/certificates/naissance/other-person';
@@ -183,18 +194,13 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
               state: state,
               child: const DossiersListScreen(),
             ),
-            routes: [
-              GoRoute(
-                path: ':id',
-                pageBuilder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return _slidePage(
-                    state: state,
-                    child: DossierDetailScreen(dossierId: id),
-                  );
-                },
-              ),
-            ],
+          ),
+          GoRoute(
+            path: '/documents',
+            pageBuilder: (context, state) => _noTransitionPage(
+              state: state,
+              child: const DocumentsScreen(),
+            ),
           ),
           GoRoute(
             path: AppRoutes.profile,
@@ -206,20 +212,106 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
         ],
       ),
 
-      // ── Certificat de naissance ─────────────────────────────
+      // ── Personal Info Edit ──────────────────────────────────
       GoRoute(
-        path: AppRoutes.naissanceBeneficiary,
+        path: '/personal-info',
         pageBuilder: (context, state) => _slidePage(
           state: state,
-          child: const BeneficiaryChoiceScreen(),
+          child: const PersonalInfoEditScreen(),
         ),
+      ),
+
+      // ── Profile Completion ──────────────────────────────────
+      GoRoute(
+        path: '/profile/completion',
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: const ProfileCompletionScreen(),
+        ),
+      ),
+
+      // ── Dossier Detail ──────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.dossierDetail, // '/dossiers/:id'
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return _slidePage(
+            state: state,
+            child: DossierDetailScreen(dossierId: id),
+          );
+        },
+      ),
+
+      // ── Category Detail ────────────────────────────────────
+      GoRoute(
+        path: '/category_detail',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final category = extra['category'] as Map<String, dynamic>? ?? {};
+          final documents = extra['documents'] as List<Map<String, dynamic>>? ?? [];
+          return _slidePage(
+            state: state,
+            child: CategoryDetailScreen(category: category, documents: documents),
+          );
+        },
+      ),
+
+      // ── Drafts ──────────────────────────────────────────────
+      GoRoute(
+        path: '/drafts',
+        pageBuilder: (context, state) {
+          return _slidePage(
+            state: state,
+            child: const DraftsScreen(),
+          );
+        },
+      ),
+
+      // ── Assistant ──────────────────────────────────────────────
+      GoRoute(
+        path: '/assistant',
+        pageBuilder: (context, state) {
+          return _slidePage(
+            state: state,
+            child: const AssistantScreen(),
+          );
+        },
+      ),
+
+      // ── Acte de naissance ─────────────────────────────
+      GoRoute(
+        path: AppRoutes.acteNaissanceForm,
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: const ActeNaissanceFormScreen(),
+        ),
+      ),
+      // ── Extrait de naissance ─────────────────────────────
+      GoRoute(
+        path: AppRoutes.naissanceBeneficiary,
+        pageBuilder: (context, state) {
+          final data = state.extra as Map<String, dynamic>? ?? {};
+          return _slidePage(
+            state: state,
+            child: BeneficiaryChoiceScreen(
+              docId: data['docId'] ?? 'extrait_naissance',
+              docName: data['docName'] ?? 'Extrait de naissance',
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.naissanceRecapSelf,
-        pageBuilder: (context, state) => _slidePage(
-          state: state,
-          child: const RecapSelfScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final data = state.extra as Map<String, dynamic>? ?? {};
+          return _slidePage(
+            state: state,
+            child: RecapSelfScreen(
+              docId: data['docId'] ?? 'extrait_naissance',
+              docName: data['docName'] ?? 'Extrait de naissance',
+            ),
+          );
+        },
         routes: [
           GoRoute(
             path: 'recap',
@@ -227,7 +319,7 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
               final data = state.extra as Map<String, dynamic>? ?? {};
               return _slidePage(
                 state: state,
-                child: RecapOtherScreen(formData: data),
+                child: RecapOtherScreen(data: data),
               );
             },
           ),
@@ -235,10 +327,16 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
       ),
       GoRoute(
         path: AppRoutes.naissanceOtherPerson,
-        pageBuilder: (context, state) => _slidePage(
-          state: state,
-          child: const OtherPersonScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final data = state.extra as Map<String, dynamic>? ?? {};
+          return _slidePage(
+            state: state,
+            child: OtherPersonScreen(
+              docId: data['docId'] ?? 'extrait_naissance',
+              docName: data['docName'] ?? 'Extrait de naissance',
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.naissanceRecapOther,
@@ -246,7 +344,7 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
           final data = state.extra as Map<String, dynamic>? ?? {};
           return _slidePage(
             state: state,
-            child: RecapOtherScreen(formData: data),
+            child: RecapOtherScreen(data: data),
           );
         },
       ),
@@ -296,7 +394,11 @@ final appRouterProvider = Provider.family<GoRouter, String>((ref, initialRoute) 
           final data = state.extra as Map<String, dynamic>? ?? {};
           return _slidePage(
             state: state,
-            child: PaymentScreen(paymentData: data),
+            child: PaymentScreen(
+              documentId: data['documentId'] as String? ?? '',
+              documentName: data['documentName'] as String? ?? '',
+              formData: data['formData'] as Map<String, dynamic>? ?? {},
+            ),
           );
         },
       ),
@@ -324,7 +426,8 @@ Future<String?> _globalRedirect(BuildContext context, GoRouterState state) async
 // ── Index shell selon la route active ─────────────────────────────────────────
 int _shellIndex(String location) {
   if (location.startsWith('/dossiers')) return 1;
-  if (location.startsWith('/profile')) return 2;
+  if (location.startsWith('/documents')) return 3;
+  if (location.startsWith('/profile')) return 4;
   return 0; // /home par défaut
 }
 
@@ -351,6 +454,42 @@ CustomTransitionPage<void> _slidePage({
     },
   );
 }
+
+CustomTransitionPage<T> _fadePage<T>({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: animation,
+        child: child,
+      );
+    },
+  );
+}
+
+/// Helpers globaux
+void navigateToDocument(BuildContext context, Map<String, dynamic> doc) {
+  final id = doc['id'];
+  if (id == 'acte_naissance' || id == 'cert_naissance') {
+    context.push(AppRoutes.acteNaissanceForm);
+  } else if (id == 'extrait_naissance') {
+    context.push(AppRoutes.naissanceBeneficiary, extra: {'docId': 'extrait_naissance', 'docName': 'Extrait de naissance'});
+  } else if (id == 'copie_litterale') {
+    context.push(AppRoutes.naissanceBeneficiary, extra: {'docId': 'copie_litterale', 'docName': 'Copie littérale'});
+  } else if (id == 'cert_deces') {
+    context.push(AppRoutes.decesForm);
+  } else if (id == 'cert_mariage') {
+    context.push(AppRoutes.mariageForm);
+  } else {
+    // Par défaut, on force vers le formulaire
+    context.push(AppRoutes.acteNaissanceForm);
+  }
+}
+
 
 /// Page sans transition (tabs bottom nav)
 NoTransitionPage<void> _noTransitionPage({

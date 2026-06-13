@@ -143,7 +143,7 @@ class _RegionCommuneSelectState extends State<RegionCommuneSelect> {
           padding: EdgeInsets.all(16),
           child: CircularProgressIndicator(
             valueColor:
-                AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
         ),
       );

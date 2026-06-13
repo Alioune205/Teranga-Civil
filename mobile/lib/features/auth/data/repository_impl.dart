@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../../core/errors/failures.dart';
 import '../domain/models/user_model.dart';
@@ -15,19 +16,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required String identifier,
     required String password,
   }) async {
-    try {
-      final res =
-          await remote.login(identifier: identifier, password: password);
-      return (token: res.token, userId: res.userId, needsOtp: res.needsOtp);
-    } on InvalidCredentialsException {
-      throw const InvalidCredentialsFailure();
-    } on TooManyAttemptsException {
-      throw const TooManyAttemptsFailure();
-    } on NetworkException {
-      throw const NetworkFailure();
-    } catch (_) {
-      throw const UnexpectedFailure();
-    }
+    // MOCK DATA FOR PROTOTYPE
+    await Future.delayed(const Duration(seconds: 1));
+    return (token: 'mock_token', userId: 'mock_user_1', needsOtp: false);
   }
 
   @override
@@ -38,21 +29,8 @@ class AuthRepositoryImpl implements AuthRepository {
     String? phone,
     String? email,
   }) async {
-    try {
-      await remote.register(
-        prenom: prenom,
-        nom: nom,
-        password: password,
-        phone: phone,
-        email: email,
-      );
-    } on PhoneAlreadyExistsException {
-      throw const PhoneAlreadyExistsFailure();
-    } on NetworkException {
-      throw const NetworkFailure();
-    } catch (_) {
-      throw const UnexpectedFailure();
-    }
+    // MOCK DATA FOR PROTOTYPE
+    await Future.delayed(const Duration(seconds: 1));
   }
 
   @override
@@ -60,38 +38,27 @@ class AuthRepositoryImpl implements AuthRepository {
     required String identifier,
     required String code,
   }) async {
-    try {
-      return await remote.verifyOtp(identifier: identifier, code: code);
-    } on InvalidOtpException {
-      throw const InvalidOtpFailure();
-    } on NetworkException {
-      throw const NetworkFailure();
-    } catch (_) {
-      throw const UnexpectedFailure();
-    }
+    await Future.delayed(const Duration(seconds: 1));
+    return 'mock_token';
   }
 
   @override
   Future<void> resendOtp({required String identifier}) async {
-    try {
-      await remote.resendOtp(identifier: identifier);
-    } on NetworkException {
-      throw const NetworkFailure();
-    } catch (_) {
-      throw const UnexpectedFailure();
-    }
+    await Future.delayed(const Duration(seconds: 1));
   }
 
   @override
   Future<UserModel> getMe() async {
-    try {
-      final res = await remote.getMe();
-      return res.toDomain();
-    } on UnauthorizedException {
-      throw const UnauthorizedFailure();
-    } catch (_) {
-      throw const UnexpectedFailure();
-    }
+    // MOCK DATA FOR PROTOTYPE
+    await Future.delayed(const Duration(seconds: 1));
+    return const UserModel(
+      id: 'mock_user_1',
+      prenom: 'Modou',
+      nom: 'Diop',
+      phone: '771234567',
+      isVerified: true,
+      communeNom: 'Dakar',
+    );
   }
 
   @override Future<void> saveToken(String t) => local.saveToken(t);

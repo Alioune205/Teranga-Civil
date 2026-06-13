@@ -76,7 +76,7 @@ class _MariageFormScreenState extends ConsumerState<MariageFormScreen> {
           SizedBox(width: 8),
           Text('Brouillon restauré'),
         ]),
-        backgroundColor: AppColors.statusBlue,
+        backgroundColor: AppColors.info,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
@@ -208,8 +208,8 @@ class _MariageFormScreenState extends ConsumerState<MariageFormScreen> {
                       _SectionTitle(
                         icon: Icons.favorite_border_outlined,
                         title: 'Vous êtes…',
-                        color: AppColors.secondary,
-                        bg: AppColors.secondary.withValues(alpha: 0.08),
+                        color: AppColors.primary,
+                        bg: AppColors.primary.withValues(alpha: 0.08),
                       ),
                       const SizedBox(height: 14),
 
@@ -309,7 +309,7 @@ class _MariageFormScreenState extends ConsumerState<MariageFormScreen> {
                       _SectionTitle(
                         icon: Icons.credit_card_outlined,
                         title: 'Pièce d\'identité du demandeur',
-                        color: AppColors.statusRed,
+                        color: AppColors.error,
                         bg: AppColors.statusRedLight,
                         badge: 'Obligatoire',
                       ),
@@ -459,16 +459,16 @@ class _RoleCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
           decoration: BoxDecoration(
-            color: selected ? AppColors.secondary : AppColors.surface,
+            color: selected ? AppColors.primary : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.secondary : AppColors.border,
+              color: selected ? AppColors.primary : AppColors.border,
               width: selected ? 2 : 1,
             ),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: AppColors.secondary.withValues(alpha: 0.25),
+                      color: AppColors.primary.withValues(alpha: 0.25),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     )
@@ -645,6 +645,7 @@ class _YearPickerField extends StatelessWidget {
     final now = DateTime.now().year;
     int currentSelection = selectedYear ?? now;
     showModalBottomSheet(
+      useRootNavigator: true,
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),

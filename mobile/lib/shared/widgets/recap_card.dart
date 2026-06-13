@@ -220,7 +220,7 @@ class InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.statusBlue;
+    final c = color ?? AppColors.info;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

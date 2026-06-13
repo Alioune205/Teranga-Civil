@@ -78,7 +78,7 @@ class _DecesFormScreenState extends ConsumerState<DecesFormScreen> {
           SizedBox(width: 8),
           Text('Brouillon restauré'),
         ]),
-        backgroundColor: AppColors.statusBlue,
+        backgroundColor: AppColors.info,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
@@ -196,7 +196,7 @@ class _DecesFormScreenState extends ConsumerState<DecesFormScreen> {
                       _SectionTitle(
                         icon: Icons.person_off_outlined,
                         title: 'Informations du défunt',
-                        color: AppColors.statusRed,
+                        color: AppColors.error,
                         bg: AppColors.statusRedLight,
                       ),
                       const SizedBox(height: 20),
@@ -320,7 +320,7 @@ class _DecesFormScreenState extends ConsumerState<DecesFormScreen> {
                       _SectionTitle(
                         icon: Icons.credit_card_outlined,
                         title: 'Pièce d\'identité du déclarant',
-                        color: AppColors.statusRed,
+                        color: AppColors.error,
                         bg: AppColors.statusRedLight,
                         badge: 'Obligatoire',
                       ),
@@ -531,7 +531,7 @@ class _LienParenteField extends StatelessWidget {
             ),
             child: Text('Requis',
                 style: AppTextStyles.caption.copyWith(
-                    color: AppColors.statusRed,
+                    color: AppColors.error,
                     fontSize: 10,
                     fontWeight: FontWeight.w600)),
           ),

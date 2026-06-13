@@ -12,6 +12,7 @@ class AssistantSheet extends ConsumerStatefulWidget {
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
+      useRootNavigator: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -104,7 +105,7 @@ class _AssistantSheetState extends ConsumerState<AssistantSheet> {
                     width: 40,
                     height: 40,
                     decoration: const BoxDecoration(
-                      color: AppColors.secondary,
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.smart_toy_outlined,
@@ -196,7 +197,7 @@ class _LangToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _LangBtn(label: '🇫🇷 FR', selected: current == 'fr',
+          _LangBtn(label: 'FR', selected: current == 'fr',
               onTap: () => onChanged('fr')),
           _LangBtn(label: 'WO', selected: current == 'wo',
               onTap: () => onChanged('wo')),
@@ -262,7 +263,7 @@ class _SuggestionsView extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.mic,
-                      color: AppColors.secondary, size: 32),
+                      color: AppColors.primary, size: 32),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -303,7 +304,7 @@ class _SuggestionsView extends StatelessWidget {
                   child: Row(
                     children: [
                       const Icon(Icons.chat_bubble_outline,
-                          size: 16, color: AppColors.secondary),
+                          size: 16, color: AppColors.primary),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(s, style: AppTextStyles.bodyMedium),
@@ -340,7 +341,7 @@ class _MessageBubble extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: const BoxDecoration(
-                color: AppColors.secondary,
+                color: AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.smart_toy_outlined,
@@ -427,7 +428,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           Container(
             width: 28, height: 28,
             decoration: const BoxDecoration(
-                color: AppColors.secondary, shape: BoxShape.circle),
+                color: AppColors.primary, shape: BoxShape.circle),
             child: const Icon(Icons.smart_toy_outlined,
                 color: AppColors.textOnPrimary, size: 16),
           ),
@@ -446,7 +447,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                       width: 6, height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.secondary.withValues(
+                        color: AppColors.primary.withValues(
                           alpha: (i == 0
                               ? _ctrl.value
                               : i == 1
@@ -502,11 +503,11 @@ class _InputBar extends StatelessWidget {
               width: 44, height: 44,
               decoration: BoxDecoration(
                 color: isListening
-                    ? AppColors.secondary
+                    ? AppColors.primary
                     : AppColors.background,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isListening ? AppColors.secondary : AppColors.border,
+                  color: isListening ? AppColors.primary : AppColors.border,
                 ),
               ),
               child: Icon(
@@ -570,7 +571,7 @@ class _InputBar extends StatelessWidget {
                         width: 18, height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(AppColors.secondary),
+                          valueColor: AlwaysStoppedAnimation(AppColors.primary),
                         ),
                       ),
                     )

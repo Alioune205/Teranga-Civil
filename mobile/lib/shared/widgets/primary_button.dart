@@ -107,7 +107,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                               strokeWidth: 2.5,
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 _active
-                                    ? AppColors.secondary
+                                    ? AppColors.primary
                                     : AppColors.buttonDisabledText,
                               ),
                             ),
@@ -281,14 +281,14 @@ class LinkButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: color ?? AppColors.secondary,
+        foregroundColor: color ?? AppColors.primary,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       child: Text(
         label,
-        style: AppTextStyles.link.copyWith(color: color ?? AppColors.secondary),
+        style: AppTextStyles.link.copyWith(color: color ?? AppColors.primary),
       ),
     );
   }

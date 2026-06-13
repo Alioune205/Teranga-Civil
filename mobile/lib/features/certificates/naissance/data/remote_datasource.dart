@@ -11,16 +11,10 @@ class NaissanceRemoteDatasource {
   /// TODO prod : utiliser MultipartFile pour envoyer la vraie image
   Future<Map<String, dynamic>> extractOcr(String imagePath) async {
     try {
-      // En production, envoyer l'image en multipart :
-      // final formData = FormData.fromMap({
-      //   'image': await MultipartFile.fromFile(imagePath, filename: 'extrait.jpg'),
-      // });
-      // final res = await client.post('/ai/ocr/extract/', data: formData);
-
-      // En mode mock : simple POST sans fichier
-      final res = await client.post('/ai/ocr/extract/', data: {
-        'image_path': imagePath,
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(imagePath, filename: 'extrait.jpg'),
       });
+      final res = await client.post('/ai/ocr/extract/', data: formData);
 
       if (res.statusCode == 200 && res.data != null) {
         final data = res.data as Map<String, dynamic>;

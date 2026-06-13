@@ -3,9 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/app_constants.dart';
-import '../mock/mock_config.dart';
-import 'network_interceptor.dart';
 import 'mock_interceptor.dart';
+import 'network_interceptor.dart';
 
 final dioClientProvider = Provider<DioClient>((ref) {
   const storage = FlutterSecureStorage();
@@ -28,20 +27,17 @@ class DioClient {
           'Accept': 'application/json',
           'X-App-Version': AppConstants.appVersion,
           'X-Platform': 'mobile',
+          'Bypass-Tunnel-Reminder': 'true',
         },
         responseType: ResponseType.json,
         validateStatus: (status) => status != null && status < 500,
       ),
     );
 
-    if (kMockMode) {
-      // En mode mock : intercepteur qui retourne des données locales
-      _dio.interceptors.add(MockInterceptor());
-      debugPrint('[MOCK] Mode mock activé — aucun serveur requis');
-    } else {
-      // En mode production : vrai intercepteur JWT
-      _dio.interceptors.add(NetworkInterceptor(storage: storage, dio: _dio));
-    }
+    // En mode mock : on intercepte les appels
+    _dio.interceptors.add(MockInterceptor()); // ENABLED MOCK
+    // En mode production : vrai intercepteur JWT
+    // _dio.interceptors.add(NetworkInterceptor(storage: storage, dio: _dio));
   }
 
   Dio get dio => _dio;

@@ -108,7 +108,7 @@ class _RegisterStep3ScreenState
                     _isEmail
                         ? Icons.email_outlined
                         : Icons.sms_outlined,
-                    color: AppColors.secondary,
+                    color: AppColors.primary,
                     size: 32,
                   ),
                 ),

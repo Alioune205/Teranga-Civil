@@ -9,14 +9,14 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/glass_card.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterStep1Screen extends ConsumerStatefulWidget {
   const RegisterStep1Screen({super.key});
 
   @override
-  ConsumerState<RegisterStep1Screen> createState() =>
-      _RegisterStep1ScreenState();
+  ConsumerState<RegisterStep1Screen> createState() => _RegisterStep1ScreenState();
 }
 
 class _RegisterStep1ScreenState extends ConsumerState<RegisterStep1Screen> {
@@ -102,234 +102,218 @@ class _RegisterStep1ScreenState extends ConsumerState<RegisterStep1Screen> {
     }
   }
 
-  static const _navy = Color(0xFF0A1F5C);
-  static const _green = Color(0xFF1D9E75);
-
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        size: 20, color: _navy),
-                    onPressed: () => context.pop(),
-                  ),
-                ],
+      body: Stack(
+        children: [
+          // Background abstrait premium
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.1),
               ),
             ),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.success.withValues(alpha: 0.1),
+              ),
+            ),
+          ),
 
-            // ── Contenu scrollable ───────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Form(
-                  key: _formKey,
-                  onChanged: () => setState(() {}),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+          SafeArea(
+            child: Column(
+              children: [
+                // Header (Bouton retour)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
                     children: [
-                      // ── Logo ─────────────────────────────────
-                      Image.asset(Assets.logoTeranga,
-                          width: 100, height: 100, fit: BoxFit.contain),
-                      const SizedBox(height: 0),
-
-                      // ── Titre ─────────────────────────────────
-                      const Text(
-                        'Créer un compte',
-                        style: TextStyle(
-                          color: _navy,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Poppins',
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.primary),
+                        onPressed: () => context.pop(),
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 36,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: _green,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Remplissez le formulaire pour vous inscrire',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySmall,
-                      ),
-                      const SizedBox(height: 28),
-
-                      // ── Toggle Téléphone / Email ──────────────
-                      _buildToggle(),
-                      const SizedBox(height: 16),
-
-                      // ── Champ identifiant ─────────────────────
-                      if (_usePhone)
-                        AppTextField(
-                          label: 'Numéro de téléphone',
-                          hint: '77 123 45 67',
-                          controller: _identifierCtr,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.next,
-                          validator: Validators.phone,
-                          prefixIcon: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 14),
-                            child: Text('+221',
-                                style: AppTextStyles.inputText.copyWith(
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600)),
-                          ),
-                        )
-                      else
-                        AppTextField(
-                          label: 'Adresse email',
-                          hint: 'nom@exemple.com',
-                          controller: _identifierCtr,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty)
-                              return 'L\'email est requis.';
-                            if (!RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$')
-                                .hasMatch(v.trim())) {
-                              return 'Adresse email invalide.';
-                            }
-                            return null;
-                          },
-                          prefixIcon: const Icon(Icons.email_outlined,
-                              color: AppColors.textSecondary, size: 20),
-                        ),
-                      const SizedBox(height: 16),
-
-                      // ── Prénom & Nom ──────────────────────────
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppTextField(
-                              label: 'Prénom',
-                              hint: 'Amadou',
-                              controller: _prenomCtr,
-                              validator: Validators.fullName,
-                              textInputAction: TextInputAction.next,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: AppTextField(
-                              label: 'Nom',
-                              hint: 'Diallo',
-                              controller: _nomCtr,
-                              validator: Validators.fullName,
-                              textInputAction: TextInputAction.next,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Mot de passe ──────────────────────────
-                      AppTextField(
-                        label: 'Mot de passe',
-                        hint: '••••••••',
-                        controller: _passwordCtr,
-                        obscureText: true,
-                        textInputAction: TextInputAction.next,
-                        validator: (v) {
-                          if (v == null || v.length < 6)
-                            return '6 caractères minimum.';
-                          return null;
-                        },
-                        prefixIcon: const Icon(Icons.lock_outline,
-                            color: AppColors.textSecondary, size: 20),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Confirmer mot de passe ────────────────
-                      AppTextField(
-                        label: 'Confirmer le mot de passe',
-                        hint: '••••••••',
-                        controller: _confirmCtr,
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        validator: (v) {
-                          if (v != _passwordCtr.text)
-                            return 'Les mots de passe ne correspondent pas.';
-                          return null;
-                        },
-                        prefixIcon: const Icon(Icons.lock_outline,
-                            color: AppColors.textSecondary, size: 20),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // ── CGU ───────────────────────────────────
-                      _CheckboxLink(
-                        value: _acceptCgu,
-                        onChanged: (v) =>
-                            setState(() => _acceptCgu = v ?? false),
-                        prefix: 'J\'accepte les ',
-                        linkText: 'conditions générales d\'utilisation',
-                        onLinkTap: () => _openUrl(
-                            'https://e-senegal.sn/#/conditions-generales-utilisation'),
-                      ),
-                      const SizedBox(height: 10),
-                      _CheckboxLink(
-                        value: _acceptPolitique,
-                        onChanged: (v) =>
-                            setState(() => _acceptPolitique = v ?? false),
-                        prefix: 'J\'accepte la ',
-                        linkText: 'politique de confidentialité',
-                        onLinkTap: () =>
-                            _openUrl('https://e-senegal.sn/#/mentions-legales'),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // ── Bouton ────────────────────────────────
-                      PrimaryButton(
-                        label: 'Envoyer le code de vérification',
-                        onPressed: _submit,
-                        isLoading: isLoading,
-                        isEnabled: _isValid,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // ── Lien connexion ────────────────────────
-                      GestureDetector(
-                        onTap: () => context.go(AppRoutes.login),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Déjà un compte ?  ',
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                              TextSpan(
-                                text: 'Se connecter',
-                                style: AppTextStyles.link,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
-              ),
+
+                // Contenu scrollable
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Form(
+                      key: _formKey,
+                      onChanged: () => setState(() {}),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(Assets.logoTeranga, width: 120, height: 120, fit: BoxFit.contain),
+                          const SizedBox(height: 16),
+
+                          Text('Créer un compte', style: AppTextStyles.displayMedium),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Remplissez le formulaire pour vous inscrire',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 28),
+
+                          GlassCard(
+                            child: Column(
+                              children: [
+                                _buildToggle(),
+                                const SizedBox(height: 16),
+
+                                if (_usePhone)
+                                  AppTextField(
+                                    label: 'Numéro de téléphone',
+                                    hint: '77 123 45 67',
+                                    controller: _identifierCtr,
+                                    keyboardType: TextInputType.phone,
+                                    textInputAction: TextInputAction.next,
+                                    validator: Validators.phone,
+                                    prefixIcon: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                                      child: Text('+221',
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                              color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                    ),
+                                  )
+                                else
+                                  AppTextField(
+                                    label: 'Adresse email',
+                                    hint: 'nom@exemple.com',
+                                    controller: _identifierCtr,
+                                    keyboardType: TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) return 'L\'email est requis.';
+                                      if (!RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$').hasMatch(v.trim())) {
+                                        return 'Adresse email invalide.';
+                                      }
+                                      return null;
+                                    },
+                                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary, size: 22),
+                                  ),
+                                const SizedBox(height: 16),
+
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: AppTextField(
+                                        label: 'Prénom',
+                                        hint: 'Amadou',
+                                        controller: _prenomCtr,
+                                        validator: Validators.fullName,
+                                        textInputAction: TextInputAction.next,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: AppTextField(
+                                        label: 'Nom',
+                                        hint: 'Diallo',
+                                        controller: _nomCtr,
+                                        validator: Validators.fullName,
+                                        textInputAction: TextInputAction.next,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                AppTextField(
+                                  label: 'Mot de passe',
+                                  hint: '••••••••',
+                                  controller: _passwordCtr,
+                                  obscureText: true,
+                                  textInputAction: TextInputAction.next,
+                                  validator: (v) {
+                                    if (v == null || v.length < 6) return '6 caractères min.';
+                                    return null;
+                                  },
+                                  prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary, size: 22),
+                                ),
+                                const SizedBox(height: 16),
+
+                                AppTextField(
+                                  label: 'Confirmer le mot de passe',
+                                  hint: '••••••••',
+                                  controller: _confirmCtr,
+                                  obscureText: true,
+                                  textInputAction: TextInputAction.done,
+                                  validator: (v) {
+                                    if (v != _passwordCtr.text) return 'Les mots de passe ne correspondent pas.';
+                                    return null;
+                                  },
+                                  prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary, size: 22),
+                                ),
+                                const SizedBox(height: 24),
+
+                                _CheckboxLink(
+                                  value: _acceptCgu,
+                                  onChanged: (v) => setState(() => _acceptCgu = v ?? false),
+                                  prefix: 'J\'accepte les ',
+                                  linkText: 'conditions générales d\'utilisation',
+                                  onLinkTap: () => _openUrl('https://e-senegal.sn/#/conditions-generales-utilisation'),
+                                ),
+                                const SizedBox(height: 10),
+                                _CheckboxLink(
+                                  value: _acceptPolitique,
+                                  onChanged: (v) => setState(() => _acceptPolitique = v ?? false),
+                                  prefix: 'J\'accepte la ',
+                                  linkText: 'politique de confidentialité',
+                                  onLinkTap: () => _openUrl('https://e-senegal.sn/#/mentions-legales'),
+                                ),
+                                const SizedBox(height: 28),
+
+                                PrimaryButton(
+                                  label: 'Envoyer le code de vérification',
+                                  onPressed: _submit,
+                                  isLoading: isLoading,
+                                  isEnabled: _isValid,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text('Déjà un compte ? ', style: AppTextStyles.bodyMedium),
+                              GestureDetector(
+                                onTap: () => context.go(AppRoutes.login),
+                                child: Text("Se connecter",
+                                    style: AppTextStyles.link.copyWith(fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -337,27 +321,66 @@ class _RegisterStep1ScreenState extends ConsumerState<RegisterStep1Screen> {
   Widget _buildToggle() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.border,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _ToggleBtn(
-            label: 'Téléphone',
-            selected: _usePhone,
-            onTap: () => setState(() {
-              _usePhone = true;
-              _identifierCtr.clear();
-            }),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() {
+                _usePhone = true;
+                _identifierCtr.clear();
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _usePhone ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _usePhone
+                      ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Text(
+                  'Téléphone',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: _usePhone ? Colors.white : AppColors.textSecondary,
+                    fontWeight: _usePhone ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
           ),
-          _ToggleBtn(
-            label: 'Email',
-            selected: !_usePhone,
-            onTap: () => setState(() {
-              _usePhone = false;
-              _identifierCtr.clear();
-            }),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() {
+                _usePhone = false;
+                _identifierCtr.clear();
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: !_usePhone ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: !_usePhone
+                      ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Text(
+                  'Email',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: !_usePhone ? Colors.white : AppColors.textSecondary,
+                    fontWeight: !_usePhone ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -365,51 +388,6 @@ class _RegisterStep1ScreenState extends ConsumerState<RegisterStep1Screen> {
   }
 }
 
-// ── Toggle btn ────────────────────────────────────────────────
-class _ToggleBtn extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _ToggleBtn(
-      {required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            gradient: selected ? AppColors.primaryGradient : null,
-            color: selected ? null : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: selected ? Colors.white : AppColors.textSecondary,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Checkbox avec lien ────────────────────────────────────────
 class _CheckboxLink extends StatelessWidget {
   final bool value;
   final void Function(bool?) onChanged;
@@ -437,8 +415,7 @@ class _CheckboxLink extends StatelessWidget {
             value: value,
             onChanged: onChanged,
             activeColor: AppColors.primary,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
         const SizedBox(width: 10),
@@ -456,9 +433,10 @@ class _CheckboxLink extends StatelessWidget {
                       child: Text(
                         linkText,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondary,
+                          color: AppColors.primary,
                           decoration: TextDecoration.underline,
-                          decorationColor: AppColors.secondary,
+                          decorationColor: AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

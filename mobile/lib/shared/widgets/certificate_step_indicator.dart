@@ -56,7 +56,7 @@ class CertificateStepIndicator extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: done
-                              ? AppColors.secondaryGradient
+                              ? AppColors.primaryGradient
                               : active
                                   ? AppColors.primaryGradient
                                   : null,
@@ -65,7 +65,7 @@ class CertificateStepIndicator extends StatelessWidget {
                               : null,
                           border: Border.all(
                             color: done
-                                ? AppColors.secondary
+                                ? AppColors.primary
                                 : active
                                     ? AppColors.primaryLight
                                     : AppColors.border,
@@ -75,7 +75,7 @@ class CertificateStepIndicator extends StatelessWidget {
                               ? [
                                   BoxShadow(
                                     color: (done
-                                            ? AppColors.secondary
+                                            ? AppColors.primary
                                             : AppColors.primary)
                                         .withValues(alpha: 0.3),
                                     blurRadius: 10,
@@ -103,7 +103,7 @@ class CertificateStepIndicator extends StatelessWidget {
                         duration: const Duration(milliseconds: 250),
                         style: AppTextStyles.caption.copyWith(
                           color: done
-                              ? AppColors.secondary
+                              ? AppColors.primary
                               : active
                                   ? AppColors.primary
                                   : AppColors.textHint,
@@ -129,7 +129,7 @@ class CertificateStepIndicator extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(2),
                         gradient: i < _current
-                            ? AppColors.secondaryGradient
+                            ? AppColors.primaryGradient
                             : null,
                         color: i < _current ? null : AppColors.border,
                       ),

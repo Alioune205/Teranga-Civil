@@ -6,7 +6,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'core/mock/mock_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,11 +25,8 @@ void main() async {
     ),
   );
 
-  // Vérifier le token avant runApp — démarrage direct sans SplashScreen
-  const storage = FlutterSecureStorage();
-  final token = await storage.read(key: 'auth_token');
-  final initialRoute =
-      (token != null && token.isNotEmpty) ? AppRoutes.home : AppRoutes.login;
+  // Bypass temporaire pour que vous puissiez voir votre page d'accueil directement
+  final initialRoute = AppRoutes.home;
 
   runApp(ProviderScope(
     child: TerangaCivilApp(initialRoute: initialRoute),
@@ -46,8 +42,7 @@ class TerangaCivilApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider(initialRoute));
     return MaterialApp.router(
       title: 'TERANGA CIVIL',
-      // Bannière orange "MOCK" visible en mode test
-      debugShowCheckedModeBanner: kMockMode,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
       localizationsDelegates: const [

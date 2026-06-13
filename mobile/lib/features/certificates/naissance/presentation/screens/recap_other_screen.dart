@@ -1,215 +1,199 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../../core/constants/app_constants.dart';
-import '../../../../../core/router/app_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
-import '../../../../../core/utils/formatters.dart';
-import '../../../../../shared/widgets/primary_button.dart';
-import '../../../../../shared/widgets/recap_card.dart';
-import '../../../../../shared/widgets/certificate_step_indicator.dart';
-import '../providers/naissance_provider.dart';
 
-/// Récapitulatif — utilisé pour "Pour moi" et "Pour une autre personne"
 class RecapOtherScreen extends ConsumerWidget {
-  final Map<String, dynamic> formData;
-  const RecapOtherScreen({super.key, required this.formData});
+  final Map<String, dynamic> data;
 
-  bool get _forSelf => formData['for_self'] as bool? ?? false;
+  const RecapOtherScreen({super.key, required this.data});
+
+  void _submitForm(BuildContext context) {
+    // Send to payment
+    context.push('/payment', extra: {
+      'documentId': data['docId'] ?? 'extrait_naissance',
+      'documentName': data['docName'] ?? 'Extrait de naissance',
+      'formData': data,
+    });
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(naissanceProvider).isLoading;
-    final dateNaissance = DateTime.tryParse(
-            formData['date_naissance'] as String? ?? '') ??
-        DateTime(1990);
-
-    final cniRecto = formData['cni_recto'] as String?;
-    final cniVerso = formData['cni_verso'] as String?;
-    final extrait = formData['extrait_naissance'] as String?;
-
-    Future<void> submit() async {
-      try {
-        final id = await ref.read(naissanceProvider.notifier).submit(
-              communeId: formData['commune_id'] as String,
-              nom: formData['nom'] as String,
-              dateNaissance: dateNaissance,
-              registre: formData['registre'] as String,
-              forSelf: _forSelf,
-            );
-        if (!context.mounted) return;
-        context.push(AppRoutes.payment, extra: {
-          'dossier_id': id,
-          'type': 'naissance',
-          'montant': AppConstants.naissanceFeesFCFA,
-          'label': 'Certificat de naissance',
-        });
-      } catch (e) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: AppColors.error),
-        );
-      }
-    }
+    final forSelf = data['forSelf'] == true;
+    final title = forSelf ? 'Récapitulatif (Pour moi)' : 'Récapitulatif (Proche)';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Récapitulatif'),
+        title: Text(title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => context.pop(),
         ),
-        actions: [
-          TextButton.icon(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.edit_outlined, size: 16),
-            label: const Text('Modifier'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            const CertificateStepIndicator(currentStep: CertStep.recap),
-            const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Vérifiez vos informations',
-                  style: AppTextStyles.headlineMedium),
-              const SizedBox(height: 4),
-              Text('Assurez-vous que tout est correct avant de payer',
-                  style: AppTextStyles.bodySmall),
-              const SizedBox(height: 24),
-
-              // ── Tableau récapitulatif ───────────────────────
-              RecapCard(
-                title: 'Certificat de naissance',
-                fields: [
-                  RecapField(
-                    label: 'Bénéficiaire',
-                    value: _forSelf ? 'Pour moi' : 'Pour une autre personne',
-                    icon: Icons.info_outline,
-                    valueColor: _forSelf
-                        ? AppColors.secondary
-                        : AppColors.statusBlue,
-                  ),
-                  RecapField(
-                    label: 'Nom complet',
-                    value: formData['nom'] as String,
-                    icon: Icons.person_outline,
-                  ),
-                  RecapField(
-                    label: 'N° de registre',
-                    value: formData['registre'] as String,
-                    icon: Icons.badge_outlined,
-                  ),
-                  RecapField(
-                    label: 'Date de naissance',
-                    value: AppFormatters.dateToFrench(dateNaissance),
-                    icon: Icons.calendar_today_outlined,
-                  ),
-                  RecapField(
-                    label: 'Commune',
-                    value: formData['commune_nom'] as String,
-                    icon: Icons.location_on_outlined,
-                  ),
-                  RecapField(
-                    label: 'Frais',
-                    value: AppFormatters.amountFCFA(
-                        AppConstants.naissanceFeesFCFA),
-                    icon: Icons.payment_outlined,
-                    valueColor: AppColors.secondary,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // ── Documents joints (si autre personne) ─────────
-              if (!_forSelf && (cniRecto != null || cniVerso != null)) ...[
-                Text('Documents joints', style: AppTextStyles.headlineSmall),
-                const SizedBox(height: 12),
-                if (cniRecto != null)
-                  _DocThumb(path: cniRecto, label: 'CNI Recto'),
-                if (cniVerso != null) ...[
-                  const SizedBox(height: 8),
-                  _DocThumb(path: cniVerso, label: 'CNI Verso'),
-                ],
-                if (extrait != null) ...[
-                  const SizedBox(height: 8),
-                  _DocThumb(path: extrait, label: 'Extrait de naissance'),
-                ],
-                const SizedBox(height: 16),
-              ],
-
+              Text('Vérifiez vos informations', style: AppTextStyles.headlineLarge),
               const SizedBox(height: 8),
-              PrimaryButton(
-                label: 'Confirmer et payer — '
-                    '${AppFormatters.amountFCFA(AppConstants.naissanceFeesFCFA)}',
-                onPressed: submit,
-                isLoading: isLoading,
+              Text(
+                'Assurez-vous que les informations saisies sont exactes avant de procéder au paiement.',
+                style: AppTextStyles.bodySmall.copyWith(color: const Color(0xFF64748B), height: 1.4),
               ),
+              const SizedBox(height: 32),
+
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildDataRow('N° de Registre', data['registre']?.toString() ?? ''),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    _buildDataRow('Année de déclaration', data['annee']?.toString() ?? ''),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    _buildDataRow('Prénom et nom', data['nom']?.toString() ?? ''),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    _buildDataRow('Région de naissance', data['region']?.toString() ?? ''),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    _buildDataRow('Commune de naissance', data['commune']?.toString() ?? ''),
+                    if (!forSelf && data['lienParente'] != null) ...[
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      _buildDataRow('Lien de parenté', data['lienParente']?.toString() ?? ''),
+                    ],
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 24),
+              
+              // Note d'alerte
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Toute fausse déclaration est passible de poursuites pénales selon la législation en vigueur.',
+                        style: TextStyle(
+                          color: Colors.red.shade900,
+                          fontSize: 12,
+                          height: 1.4,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Color(0xFF0B285D)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text(
+                        'Modifier',
+                        style: TextStyle(color: Color(0xFF0B285D), fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'Inter'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: GestureDetector(
+                      onTap: () => _submitForm(context),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0B285D), Color(0xFF1B4A9C)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: const Text(
+                          'Payer et soumettre',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
-          ],
-        ),
-      ),
     );
   }
-}
 
-class _DocThumb extends StatelessWidget {
-  final String path;
-  final String label;
-  const _DocThumb({required this.path, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
+  Widget _buildDataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.file(
-              File(path),
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 48,
-                height: 48,
-                color: AppColors.background,
-                child: const Icon(Icons.insert_drive_file_outlined,
-                    color: AppColors.textSecondary),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 14,
+                fontFamily: 'Inter',
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label, style: AppTextStyles.labelMedium)),
-          const Icon(Icons.check_circle,
-              color: AppColors.secondary, size: 18),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
         ],
       ),
     );

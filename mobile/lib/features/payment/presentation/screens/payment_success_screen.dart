@@ -59,7 +59,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
               Text(
                 'Paiement confirmé !',
                 style: AppTextStyles.headlineLarge.copyWith(
-                  color: AppColors.secondary,
+                  color: AppColors.primary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -80,12 +80,12 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                   color: AppColors.statusGreenLight,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: AppColors.secondary.withValues(alpha: 0.3)),
+                      color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.check_circle_outline,
-                        color: AppColors.secondary, size: 22),
+                        color: AppColors.primary, size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -93,7 +93,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                         children: [
                           Text('Dossier créé',
                               style: AppTextStyles.labelLarge.copyWith(
-                                  color: AppColors.secondary)),
+                                  color: AppColors.primary)),
                           Text(
                             'Réf: ${widget.dossierId}',
                             style: AppTextStyles.caption,

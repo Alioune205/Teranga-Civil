@@ -7,6 +7,8 @@ class DossierModel {
   final String? beneficiaryNom;
   final int? fraisFCFA;
 
+  final double progress;
+
   const DossierModel({
     required this.id,
     required this.type,
@@ -15,6 +17,7 @@ class DossierModel {
     this.communeNom,
     this.beneficiaryNom,
     this.fraisFCFA,
+    this.progress = 0.0,
   });
 
   factory DossierModel.fromJson(Map<String, dynamic> json) => DossierModel(
@@ -26,5 +29,6 @@ class DossierModel {
         communeNom: json['commune_nom'] as String?,
         beneficiaryNom: json['beneficiary_nom'] as String?,
         fraisFCFA: json['frais'] as int?,
+        progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
       );
 }

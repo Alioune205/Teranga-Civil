@@ -41,8 +41,8 @@ class OtpInput extends StatelessWidget {
         selectedColor: AppColors.primary,
         selectedFillColor: AppColors.surface,
         // Rempli
-        activeColor: hasError ? AppColors.error : AppColors.secondary,
-        activeFillColor: hasError ? AppColors.errorLight : AppColors.successLight,
+        activeColor: hasError ? AppColors.error : AppColors.primary,
+        activeFillColor: hasError ? AppColors.statusRedLight : AppColors.statusGreenLight,
         // Erreur globale
         errorBorderColor: AppColors.error,
       ),

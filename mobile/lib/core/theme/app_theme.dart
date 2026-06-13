@@ -15,15 +15,15 @@ abstract class AppTheme {
         brightness: Brightness.light,
         primary: AppColors.primary,
         onPrimary: AppColors.textOnPrimary,
-        primaryContainer: Color(0xFFDDE3FF),
+        primaryContainer: AppColors.surfaceElevated,
         onPrimaryContainer: AppColors.primary,
-        secondary: AppColors.secondary,
+        secondary: AppColors.success,
         onSecondary: AppColors.textOnPrimary,
         secondaryContainer: AppColors.statusGreenLight,
-        onSecondaryContainer: AppColors.secondary,
+        onSecondaryContainer: AppColors.success,
         error: AppColors.error,
         onError: AppColors.textOnPrimary,
-        errorContainer: AppColors.errorLight,
+        errorContainer: AppColors.statusRedLight,
         onErrorContainer: AppColors.error,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
@@ -35,7 +35,7 @@ abstract class AppTheme {
         scrim: AppColors.overlay,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
+      textTheme: GoogleFonts.interTextTheme().copyWith(
         displayLarge: AppTextStyles.displayLarge,
         displayMedium: AppTextStyles.displayMedium,
         headlineLarge: AppTextStyles.headlineLarge,
@@ -88,7 +88,7 @@ abstract class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.secondary,
+          foregroundColor: AppColors.info,
           textStyle: AppTextStyles.link,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         ),
@@ -134,15 +134,18 @@ abstract class AppTheme {
           borderSide: const BorderSide(color: AppColors.divider, width: 1),
         ),
       ),
-      // FIX 1 : CardThemeData (pas CardTheme)
       cardTheme: const CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.success,
         foregroundColor: AppColors.textOnPrimary,
         elevation: 4,
         shape: CircleBorder(),
@@ -159,37 +162,37 @@ abstract class AppTheme {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.secondary,
+        color: AppColors.primary,
         linearTrackColor: AppColors.border,
         circularTrackColor: AppColors.border,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) =>
             states.contains(WidgetState.selected)
-                ? AppColors.secondary
+                ? AppColors.success
                 : AppColors.textHint),
-        trackColor: WidgetStateProperty.resolveWith((states) =>
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) =>
             states.contains(WidgetState.selected)
                 ? AppColors.statusGreenLight
                 : AppColors.divider),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
+        fillColor: WidgetStateProperty.resolveWith<Color?>((states) =>
             states.contains(WidgetState.selected)
                 ? AppColors.primary
                 : AppColors.transparent),
-        checkColor: WidgetStateProperty.all(AppColors.textOnPrimary),
+        checkColor: WidgetStateProperty.all<Color?>(AppColors.textOnPrimary),
         side: const BorderSide(color: AppColors.border, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
+        fillColor: WidgetStateProperty.resolveWith<Color?>((states) =>
             states.contains(WidgetState.selected)
                 ? AppColors.primary
                 : AppColors.textSecondary),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primaryDark,
         contentTextStyle:
             AppTextStyles.bodyMedium.copyWith(color: AppColors.textOnPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -205,7 +208,6 @@ abstract class AppTheme {
         showDragHandle: true,
         dragHandleColor: AppColors.border,
       ),
-      // FIX 2 : DialogThemeData (pas DialogTheme)
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         elevation: 8,

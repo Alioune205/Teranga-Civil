@@ -42,7 +42,7 @@ class UploadDocumentCard extends StatelessWidget {
               : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hasFile ? AppColors.secondary : AppColors.border,
+            color: _hasFile ? AppColors.primary : AppColors.border,
             width: _hasFile ? 2 : 1,
           ),
         ),
@@ -100,7 +100,7 @@ class _EmptyState extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(AppColors.secondary),
+                        valueColor: AlwaysStoppedAnimation(AppColors.primary),
                       ),
                     ),
                   )
@@ -126,7 +126,7 @@ class _EmptyState extends StatelessWidget {
                         child: Text(
                           'Requis',
                           style: AppTextStyles.caption.copyWith(
-                              color: AppColors.statusRed,
+                              color: AppColors.error,
                               fontSize: 10),
                         ),
                       ),
@@ -139,7 +139,7 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const Icon(Icons.add_circle_outline,
-              color: AppColors.secondary, size: 22),
+              color: AppColors.primary, size: 22),
         ],
       ),
     );
@@ -192,11 +192,11 @@ class _FilePreview extends StatelessWidget {
                 Row(
                   children: [
                     const Icon(Icons.check_circle,
-                        color: AppColors.secondary, size: 14),
+                        color: AppColors.primary, size: 14),
                     const SizedBox(width: 4),
                     Text('Document ajouté',
                         style: AppTextStyles.caption.copyWith(
-                            color: AppColors.secondary)),
+                            color: AppColors.primary)),
                   ],
                 ),
               ],
@@ -230,7 +230,7 @@ class _FilePreview extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.delete_outline,
-                        size: 16, color: AppColors.statusRed),
+                        size: 16, color: AppColors.error),
                   ),
                 ),
               ],
@@ -244,60 +244,15 @@ class _FilePreview extends StatelessWidget {
 
 /// Utilitaire pour ouvrir la caméra ou la galerie
 class DocumentUploadHelper {
-  static final _picker = ImagePicker();
-
   static Future<String?> pick(BuildContext context) async {
-    return showModalBottomSheet<String>(
+    // Simulate upload (delay + dummy path)
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Ajouter un document',
-                  style: AppTextStyles.headlineSmall),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined,
-                    color: AppColors.primary),
-                title: Text('Prendre une photo',
-                    style: AppTextStyles.bodyLarge),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                onTap: () async {
-                  final nav = Navigator.of(ctx);
-                  final file = await _picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 85,
-                  );
-                  nav.pop(file?.path);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined,
-                    color: AppColors.primary),
-                title: Text('Choisir depuis la galerie',
-                    style: AppTextStyles.bodyLarge),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                onTap: () async {
-                  final nav = Navigator.of(ctx);
-                  final file = await _picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 85,
-                  );
-                  nav.pop(file?.path);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+    await Future.delayed(const Duration(seconds: 1));
+    Navigator.of(context).pop(); // close loader
+    return 'simulated_path.jpg';
   }
 }

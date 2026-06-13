@@ -101,7 +101,7 @@ class MariageRecapScreen extends ConsumerWidget {
                     _SectionHeader(
                       icon: Icons.favorite_border_outlined,
                       label: 'Demandeur',
-                      color: AppColors.secondary,
+                      color: AppColors.primary,
                     ),
                     const SizedBox(height: 10),
                     _RoleBadge(role: role),
@@ -123,7 +123,7 @@ class MariageRecapScreen extends ConsumerWidget {
                           label: roleLabel,
                           value: nomDemandeur,
                           icon: Icons.person_outline,
-                          valueColor: AppColors.secondary,
+                          valueColor: AppColors.primary,
                         ),
                         RecapField(
                           label: conjointLabel,
@@ -151,7 +151,7 @@ class MariageRecapScreen extends ConsumerWidget {
                           value: AppFormatters.amountFCFA(
                               AppConstants.mariageFeesFCFA),
                           icon: Icons.payment_outlined,
-                          valueColor: AppColors.secondary,
+                          valueColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -164,7 +164,7 @@ class MariageRecapScreen extends ConsumerWidget {
                             ? Icons.article_outlined
                             : Icons.credit_card_outlined,
                         label: docTypeLabel,
-                        color: AppColors.statusBlue,
+                        color: AppColors.info,
                       ),
                       const SizedBox(height: 10),
                       _DocThumb(
@@ -187,24 +187,24 @@ class MariageRecapScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color:
-                            AppColors.statusBlue.withValues(alpha: 0.07),
+                            AppColors.info.withValues(alpha: 0.07),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: AppColors.statusBlue
+                            color: AppColors.info
                                 .withValues(alpha: 0.25)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.info_outline,
-                              color: AppColors.statusBlue, size: 18),
+                              color: AppColors.info, size: 18),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Votre demande sera traitée par le centre d\'état civil '
                               'compétent. Un email de confirmation vous sera envoyé.',
                               style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.statusBlue),
+                                  color: AppColors.info),
                             ),
                           ),
                         ],
@@ -241,22 +241,22 @@ class _RoleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.secondary.withValues(alpha: 0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: AppColors.secondary.withValues(alpha: 0.3)),
+            color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Row(children: [
         Icon(
           role == 'epoux' ? Icons.man_outlined : Icons.woman_outlined,
-          color: AppColors.secondary,
+          color: AppColors.primary,
           size: 24,
         ),
         const SizedBox(width: 12),
         Text(
           'Je suis ${role == 'epoux' ? 'l\'Époux' : 'l\'Épouse'}',
           style: AppTextStyles.labelMedium.copyWith(
-              color: AppColors.secondary, fontWeight: FontWeight.w700),
+              color: AppColors.primary, fontWeight: FontWeight.w700),
         ),
       ]),
     );
@@ -325,7 +325,7 @@ class _DocThumb extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(child: Text(label, style: AppTextStyles.labelMedium)),
         const Icon(Icons.check_circle,
-            color: AppColors.secondary, size: 18),
+            color: AppColors.primary, size: 18),
       ]),
     );
   }

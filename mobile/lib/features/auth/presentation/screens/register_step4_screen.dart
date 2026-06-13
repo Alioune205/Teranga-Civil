@@ -259,7 +259,7 @@ class _ProgressBar extends StatelessWidget {
         child: FractionallySizedBox(
           alignment: Alignment.centerLeft,
           widthFactor: step / 4,
-          child: Container(color: AppColors.secondary),
+          child: Container(color: AppColors.primary),
         ),
       );
 }
