@@ -46,9 +46,6 @@ class DossierCreateSerializer(serializers.ModelSerializer):
             'type',
             'commune',
             'notes',
-            'is_for_third_party',
-            'third_party_cni',
-            'third_party_relation',
             'metadata',
         ]
         read_only_fields = ['id']
@@ -96,11 +93,12 @@ class DossierListSerializer(serializers.ModelSerializer):
     citizen = UserListSerializer(read_only=True)
     assigned_agent = UserListSerializer(read_only=True)
     commune = CommuneSerializer(read_only=True)
-    citizen_name = serializers.CharField(source='citizen.full_name', read_only=True)
+    citizen_name = serializers.SerializerMethodField()
     agent_name = serializers.CharField(source='assigned_agent.full_name', read_only=True, default=None)
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
+    pdf_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Dossier
@@ -117,12 +115,24 @@ class DossierListSerializer(serializers.ModelSerializer):
             'agent_name',
             'commune',
             'commune_name',
-            'is_for_third_party',
             'metadata',
+            'pdf_url',
             'submitted_at',
             'created_at',
         ]
         read_only_fields = fields
+
+    def get_citizen_name(self, obj):
+        if obj.citizen:
+            return obj.citizen.full_name
+        if obj.citoyen_guichet:
+            return obj.citoyen_guichet.nom_complet
+        return "N/A"
+
+    def get_pdf_url(self, obj):
+        if obj.status in [Dossier.Status.APPROVED, Dossier.Status.COMPLETED]:
+            return f"/api/dossiers/{obj.id}/download-pdf/"
+        return None
 
 
 class DossierDetailSerializer(serializers.ModelSerializer):
@@ -130,14 +140,15 @@ class DossierDetailSerializer(serializers.ModelSerializer):
     citizen = UserListSerializer(read_only=True)
     assigned_agent = UserListSerializer(read_only=True)
     commune = CommuneSerializer(read_only=True)
-    citizen_name = serializers.CharField(source='citizen.full_name', read_only=True)
-    citizen_email = serializers.CharField(source='citizen.email', read_only=True)
+    citizen_name = serializers.SerializerMethodField()
+    citizen_email = serializers.SerializerMethodField()
     agent_name = serializers.CharField(source='assigned_agent.full_name', read_only=True, default=None)
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     commune_name = serializers.CharField(source='commune.name', read_only=True)
     comments = DossierCommentSerializer(many=True, read_only=True)
     document_count = serializers.SerializerMethodField()
+    pdf_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Dossier
@@ -156,10 +167,8 @@ class DossierDetailSerializer(serializers.ModelSerializer):
             'commune',
             'commune_name',
             'notes',
-            'is_for_third_party',
-            'third_party_cni',
-            'third_party_relation',
             'metadata',
+            'pdf_url',
             'rejection_reason',
             'submitted_at',
             'reviewed_at',
@@ -171,8 +180,27 @@ class DossierDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    def get_citizen_name(self, obj):
+        if obj.citizen:
+            return obj.citizen.full_name
+        if obj.citoyen_guichet:
+            return obj.citoyen_guichet.nom_complet
+        return "N/A"
+
+    def get_citizen_email(self, obj):
+        if obj.citizen:
+            return obj.citizen.email
+        if obj.citoyen_guichet and obj.citoyen_guichet.email:
+            return obj.citoyen_guichet.email
+        return "N/A"
+
     def get_document_count(self, obj):
         return obj.documents.count() if hasattr(obj, 'documents') else 0
+
+    def get_pdf_url(self, obj):
+        if obj.status in [Dossier.Status.APPROVED, Dossier.Status.COMPLETED]:
+            return f"/api/dossiers/{obj.id}/download-pdf/"
+        return None
 
 
 class DossierUpdateSerializer(serializers.ModelSerializer):

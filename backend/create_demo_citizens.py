@@ -12,7 +12,7 @@ from apps.etat_civil.models_citoyen import Citoyen
 def create_demo_users():
     # S'assure qu'une commune existe avec le code utilisé par le frontend
     commune, _ = Commune.objects.get_or_create(
-        code="DK-DK-01", 
+        code="DKR-PLT", 
         defaults={"name": "Dakar Plateau", "region": "Dakar"}
     )
     print(f"Commune '{commune.name}' prete.")
@@ -90,14 +90,8 @@ def create_demo_users():
             commune=commune,
             type_acte='birth_certificate',
             defaults={
-                'prenoms_enfant': data['first_name'],
-                'nom_enfant': data['last_name'],
-                'sexe': data['sexe'],
+                'nom_complet_personne': f"{data['first_name']} {data['last_name']}",
                 'date_naissance_personne': data['date_naissance'],
-                'lieu_naissance': data['lieu_naissance'],
-                'prenom_pere': data['prenom_pere'],
-                'prenom_mere': data['prenom_mere'],
-                'nom_mere': data['nom_mere'],
             }
         )
         if reg_created:

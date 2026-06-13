@@ -4,8 +4,8 @@ def test_api():
     base_url = 'http://localhost:8000/api'
     # 1. Login
     res = requests.post(f"{base_url}/auth/login/", json={
-        "email": "superadmin@terangacivil.sn",
-        "password": "Password123!"
+        "email": "admin@terangacivil.sn",
+        "password": "Teranga2026!"
     })
     
     if res.status_code != 200:

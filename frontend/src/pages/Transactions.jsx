@@ -19,8 +19,10 @@ import {
   Eye, 
   X, 
   CreditCard, 
-  Clock 
+  Clock,
+  FileText
 } from 'lucide-react';
+import axiosClient from '@/api/axiosClient';
 
 const STATUS_BADGES = {
   pending: { label: 'En attente', className: 'bg-[#F59E0B] text-white border-[#F59E0B]' },
@@ -69,6 +71,34 @@ export default function Transactions() {
   const [selectedTx, setSelectedTx] = useState(null); // Pour le drawer
   
   const pageSize = 20;
+
+  const handleDownloadReceipt = async (tx) => {
+    try {
+      const res = await axiosClient.get(`/api/transactions/${tx.id}/receipt/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `recu_${tx.receipt_number || tx.reference}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      toast({
+        title: 'Reçu téléchargé',
+        description: `Le reçu de la transaction ${tx.reference} a été téléchargé avec succès.`,
+        className: 'bg-green-50 border-green-200 text-green-900',
+      });
+    } catch (err) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de télécharger le reçu de paiement.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Récupérer les stats
   const fetchStats = useCallback(async () => {
@@ -478,7 +508,12 @@ export default function Transactions() {
                   return (
                     <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 py-3">
-                        <span className="text-sm font-semibold text-secondary font-mono">{tx.reference}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-secondary font-mono">{tx.reference}</span>
+                          {tx.receipt_number && (
+                            <span className="text-[10px] text-slate-400 font-mono">Reçu: {tx.receipt_number}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-slate-600 font-medium block max-w-[200px] truncate" title={tx.service_label}>
@@ -508,15 +543,28 @@ export default function Transactions() {
                         <span className="text-xs text-slate-500 font-medium">{formatDate(tx.created_at)}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button 
-                          onClick={() => setSelectedTx(tx)}
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-[#1D4ED8] hover:text-[#1D4ED8] hover:bg-[#1D4ED8]/10 font-bold focus:ring-[#1D4ED8]"
-                        >
-                          <Eye className="h-4 w-4 mr-1.5" />
-                          Voir le détail
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {tx.receipt_number && (
+                            <Button 
+                              onClick={() => handleDownloadReceipt(tx)}
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 font-bold focus:ring-emerald-500"
+                              title="Télécharger le reçu PDF"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            onClick={() => setSelectedTx(tx)}
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-[#1D4ED8] hover:text-[#1D4ED8] hover:bg-[#1D4ED8]/10 font-bold focus:ring-[#1D4ED8]"
+                          >
+                            <Eye className="h-4 w-4 mr-1.5" />
+                            Voir
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -620,6 +668,20 @@ export default function Transactions() {
                   <span className="text-sm font-semibold text-slate-600 block mt-1">{formatDate(selectedTx.created_at)}</span>
                 </div>
 
+                {selectedTx.receipt_number && (
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Numéro de reçu</span>
+                    <span className="text-sm font-bold text-slate-600 block mt-1">{selectedTx.receipt_number}</span>
+                  </div>
+                )}
+
+                {selectedTx.comment && (
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Commentaire</span>
+                    <span className="text-sm font-semibold text-slate-600 block mt-1">{selectedTx.comment}</span>
+                  </div>
+                )}
+
                 {selectedTx.treasury_transfers && selectedTx.treasury_transfers.length > 0 && (
                   <div>
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Versements Trésor Public</span>
@@ -642,8 +704,18 @@ export default function Transactions() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 italic">Consultation uniquement</span>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between gap-2">
+              {selectedTx.receipt_number ? (
+                <Button 
+                  onClick={() => handleDownloadReceipt(selectedTx)}
+                  className="bg-emerald-600 text-white hover:bg-emerald-600/90 px-4 gap-2 focus:ring-emerald-500"
+                >
+                  <FileText className="h-4 w-4" />
+                  Reçu PDF
+                </Button>
+              ) : (
+                <span className="text-[11px] text-slate-400 italic">Consultation uniquement</span>
+              )}
               <Button 
                 onClick={() => setSelectedTx(null)}
                 className="bg-[#1D4ED8] text-white hover:bg-[#1D4ED8]/90 px-4 focus:ring-[#1D4ED8]"

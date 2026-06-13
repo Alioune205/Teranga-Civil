@@ -76,7 +76,7 @@ class AdminTransactionListView(ListAPIView):
     permission_classes = [IsSuperAdmin]
 
     def get_queryset(self):
-        queryset = PaymentTransaction.objects.all().prefetch_related('treasury_transfers')
+        queryset = PaymentTransaction.objects.all().select_related('dossier', 'agent').prefetch_related('treasury_transfers')
 
         # Filtre par type de paiement
         payment_type = self.request.query_params.get('payment_type')
@@ -108,10 +108,8 @@ class AdminTransactionListView(ListAPIView):
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-from rest_framework.views import APIView
 from django.db.models import Sum, Count
 from django.utils import timezone
-from apps.shared.responses import success_response
 from .models import PaymentStatus
 
 class AdminTransactionStatsView(APIView):
@@ -155,4 +153,146 @@ class AdminTransactionStatsView(APIView):
             'success_rate': round(success_rate, 2),
             'distribution': dist_dict
         })
+
+
+from django.utils.crypto import get_random_string
+from django.utils import timezone
+from django.http import HttpResponse
+from apps.dossiers.models import Dossier
+from apps.audit_logs.models import AuditLog
+from .services import generate_receipt_pdf
+
+class RegisterGuichetPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not hasattr(user, 'role') or user.role not in ['reception_agent', 'civil_admin', 'super_admin']:
+            return error_response(message="Vous n'avez pas l'autorisation d'enregistrer des paiements.", status_code=403)
+
+        dossier_id = request.data.get('dossier_id')
+        amount = request.data.get('amount')
+        payment_type = request.data.get('payment_type')
+        transaction_reference = request.data.get('transaction_reference', '')
+        comment = request.data.get('comment', '')
+
+        if not dossier_id or amount is None or not payment_type:
+            return error_response(message="Champs requis manquants: dossier_id, amount, payment_type.", status_code=400)
+
+        try:
+            dossier = Dossier.objects.get(id=dossier_id)
+        except Dossier.DoesNotExist:
+            return error_response(message="Dossier introuvable.", status_code=404)
+
+        if payment_type in ['wave', 'orange_money', 'free_money'] and not transaction_reference:
+            return error_response(message=f"La référence de transaction est obligatoire pour le mode de paiement {payment_type}.", status_code=400)
+
+        payer_name = "Citoyen Anonyme"
+        payer_id = "N/A"
+        if dossier.citizen:
+            payer_name = dossier.citizen.full_name
+            payer_id = dossier.citizen.phone or dossier.citizen.email or dossier.citizen.username
+        elif dossier.citoyen_guichet:
+            payer_name = dossier.citoyen_guichet.nom_complet
+            payer_id = dossier.citoyen_guichet.telephone or dossier.citoyen_guichet.cni or "N/A"
+
+        import random
+        today_str = timezone.now().strftime('%Y%m%d')
+        while True:
+            rand_part = "".join([str(random.randint(0, 9)) for _ in range(4)])
+            receipt_number = f"REC-{today_str}-{rand_part}"
+            if not PaymentTransaction.objects.filter(receipt_number=receipt_number).exists():
+                break
+
+        tx = PaymentTransaction.objects.create(
+            reference=f"TX_{get_random_string(8).upper()}",
+            amount=amount,
+            currency='XOF',
+            payment_type=payment_type,
+            status='paid',
+            payer_name=payer_name,
+            payer_id=payer_id,
+            service_label=f"Frais de traitement: {dossier.get_type_display()}",
+            dossier=dossier,
+            agent=user,
+            receipt_number=receipt_number,
+            transaction_reference=transaction_reference,
+            comment=comment
+        )
+
+        dossier.status = Dossier.Status.SUBMITTED
+        dossier.submitted_at = timezone.now()
+        dossier.save(update_fields=['status', 'submitted_at'])
+
+        AuditLog.log(
+            user=user,
+            action=AuditLog.Action.CREATE,
+            resource_type='payment_transaction',
+            resource_id=tx.id,
+            details={
+                'dossier_id': str(dossier.id),
+                'receipt_number': receipt_number,
+                'amount': float(amount),
+                'payment_type': payment_type
+            }
+        )
+
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.dossiers.serializers import DossierDetailSerializer
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'admin_dashboard',
+                {
+                    'type': 'dashboard_update',
+                    'message': 'new_dossier',
+                    'data': DossierDetailSerializer(dossier).data
+                }
+            )
+            async_to_sync(channel_layer.group_send)(
+                'admin_dashboard',
+                {
+                    'type': 'dashboard_update',
+                    'message': 'new_transaction',
+                    'data': PaymentTransactionSerializer(tx).data
+                }
+            )
+        except Exception as e:
+            pass
+
+        return success_response(
+            message="Paiement enregistré avec succès.",
+            data={
+                "status": "success",
+                "transaction_id": str(tx.id),
+                "receipt_number": receipt_number,
+                "pdf_url": f"/api/transactions/{tx.id}/receipt/"
+            }
+        )
+
+
+class DownloadReceiptPDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            tx = PaymentTransaction.objects.get(id=pk)
+        except PaymentTransaction.DoesNotExist:
+            return HttpResponse("Transaction introuvable.", status=404)
+
+        pdf_data = generate_receipt_pdf(tx)
+
+        AuditLog.log(
+            user=request.user,
+            action=AuditLog.Action.DOWNLOAD,
+            resource_type='payment_receipt',
+            resource_id=tx.id,
+            details={'receipt_number': tx.receipt_number}
+        )
+
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="recu_{tx.receipt_number or tx.reference}.pdf"'
+        return response
+
 

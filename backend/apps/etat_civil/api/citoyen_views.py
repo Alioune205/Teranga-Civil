@@ -37,7 +37,13 @@ class CitoyenViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def guichet(self, request, pk=None):
         citoyen = self.get_object()
-        serializer = GuichetRapideSerializer(data=request.data)
+        # Support both JSON and multipart/form-data
+        input_data = request.data
+        if hasattr(request.data, 'dict'):
+            input_data = request.data.dict()
+            
+        # Parse data with serializer
+        serializer = GuichetRapideSerializer(data=input_data)
         
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -64,10 +70,33 @@ class CitoyenViewSet(viewsets.ModelViewSet):
             'numero_registre': str(random.randint(1, 99999))
         }
         
-        # 1. Créer une Demande avec statut DELIVERED
+        # Override metadata for residence certificate if provided in form data
+        if input_data.get('type_document') == 'residence_certificate' or input_data.get('type_acte') == 'residence':
+            if 'adresse_residence' in input_data:
+                metadata['adresse'] = input_data['adresse_residence']
+            if 'duree_residence' in input_data:
+                # La valeur contient déjà l'unité (ex: "1 an", "2 ans", "6 mois")
+                # → ne pas ajouter "ans" pour éviter le doublon "1 an ans"
+                metadata['date_installation'] = f"il y a {input_data['duree_residence']}"
+            if 'nom_complet' in input_data:
+                parts = input_data['nom_complet'].split(' ', 1)
+                if len(parts) > 1:
+                    metadata['prenoms_requerant'] = parts[0]
+                    metadata['nom_requerant'] = parts[1]
+                else:
+                    metadata['prenoms_requerant'] = parts[0]
+                    metadata['nom_requerant'] = ''
+            if 'date_naissance' in input_data:
+                metadata['date_naissance'] = input_data['date_naissance']
+            # Récupérer le quartier depuis le profil citoyen si non déjà défini
+            if not metadata.get('quartier') and citoyen.quartier:
+                metadata['quartier'] = citoyen.quartier
+        
+        
+        # 1. Créer une Demande avec statut COMPLETED
         dossier = Dossier.objects.create(
             type=data['type_document'],
-            status=Dossier.Status.DELIVERED,
+            status=Dossier.Status.COMPLETED,
             citoyen_guichet=citoyen,
             commune=citoyen.commune,
             notes=data.get('motif', ''),
@@ -120,7 +149,7 @@ class CitoyenViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def documents(self, request, pk=None):
         citoyen = self.get_object()
-        dossiers = citoyen.dossiers.filter(status=Dossier.Status.DELIVERED).order_by('-completed_at')
+        dossiers = citoyen.dossiers.filter(status=Dossier.Status.COMPLETED).order_by('-completed_at')
         
         docs = []
         for d in dossiers:

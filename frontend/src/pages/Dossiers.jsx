@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import PaymentModal from '@/components/payments/PaymentModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -53,6 +54,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  CreditCard,
 } from 'lucide-react';
 
 const STATUS_OPTIONS = [
@@ -126,6 +128,7 @@ export default function Dossiers() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [agentSearch, setAgentSearch] = useState('');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   // Charger les communes
   useEffect(() => {
@@ -374,6 +377,16 @@ export default function Dossiers() {
                 >
                   <UserPlus className="h-4 w-4 mr-2" /> Assigner agent
                 </DropdownMenuItem>
+                {['reception_agent', 'civil_admin', 'super_admin'].includes(role) && dossier.status === 'draft' && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedDossier(dossier);
+                      setPaymentModalOpen(true);
+                    }}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2 text-primary" /> Enregistrer un paiement
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 {dossier.status === 'in_review' && (
                   <DropdownMenuItem onClick={() => handleApprove(dossier)}>
@@ -394,8 +407,8 @@ export default function Dossiers() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => handleDownloadPdf(dossier)}
-                  disabled={!['validated', 'delivered', 'generated'].includes(dossier.status)}
-                  title={!['validated', 'delivered', 'generated'].includes(dossier.status) ? "Le PDF n'est pas encore généré" : "Télécharger le PDF"}
+                  disabled={!['approved', 'completed'].includes(dossier.status)}
+                  title={!['approved', 'completed'].includes(dossier.status) ? "Le PDF n'est pas encore généré" : "Télécharger le PDF"}
                 >
                   <FileDown className="h-4 w-4 mr-2" /> PDF
                 </DropdownMenuItem>
@@ -694,6 +707,17 @@ export default function Dossiers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Paiement */}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => {
+          setPaymentModalOpen(false);
+          setSelectedDossier(null);
+        }}
+        dossier={selectedDossier}
+        onSuccess={refresh}
+      />
     </div>
   );
 }

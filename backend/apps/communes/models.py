@@ -44,6 +44,67 @@ class Commune(TimeStampedModel):
         default='',
         verbose_name='Email',
     )
+    
+    # Configuration Centralisée des Communes
+    nom_commune_officiel = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name="Nom officiel de la commune"
+    )
+    devise = models.CharField(
+        max_length=255, 
+        default="Un Peuple - Un But - Une Foi", 
+        verbose_name="Devise"
+    )
+    nom_officier_etat_civil = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name="Nom de l'officier d'état civil"
+    )
+    
+    # Chemins des cachets et signatures
+    chemin_cachet_communal = models.CharField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        verbose_name="Chemin du cachet communal"
+    )
+    chemin_cachet_nominal = models.CharField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        verbose_name="Chemin du cachet nominal"
+    )
+    chemin_signature_officier = models.CharField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        verbose_name="Chemin de la signature de l'officier"
+    )
+    
+    # Préfixes des actes
+    prefixe_residence = models.CharField(
+        max_length=20, 
+        default="RES-2026-", 
+        verbose_name="Préfixe Résidence"
+    )
+    prefixe_mariage = models.CharField(
+        max_length=20, 
+        default="MAR-2026-", 
+        verbose_name="Préfixe Mariage"
+    )
+    prefixe_deces = models.CharField(
+        max_length=20, 
+        default="DEC-2026-", 
+        verbose_name="Préfixe Décès"
+    )
+    
+    numero_registre_courant = models.IntegerField(
+        default=1, 
+        verbose_name="Numéro de registre courant"
+    )
 
     class Meta:
         verbose_name = 'Commune'

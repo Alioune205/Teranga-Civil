@@ -34,7 +34,7 @@ class DashboardTests(APITestCase):
             citizen=self.citizen,
             commune=self.commune_dakar,
             assigned_agent=self.admin,
-            status=Dossier.Status.VALIDATED,
+            status=Dossier.Status.APPROVED,
             type=Dossier.Type.BIRTH_CERTIFICATE,
             submitted_at=now - timedelta(days=2),
             completed_at=now

@@ -39,7 +39,7 @@ def verify_document(request, reference):
     try:
         dossier = Dossier.objects.select_related('citizen', 'commune').get(
             reference=reference,
-            status__in=[Dossier.Status.VALIDATED, Dossier.Status.DELIVERED],
+            status__in=[Dossier.Status.APPROVED, Dossier.Status.COMPLETED],
         )
     except Dossier.DoesNotExist:
         return error_response(

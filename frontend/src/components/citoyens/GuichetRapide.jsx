@@ -197,7 +197,7 @@ export default function GuichetRapide({ open, onOpenChange, initialCitoyen = nul
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl bg-layer-1 border-border-strong p-0 overflow-hidden">
-        {step < 4 ? (
+        {step !== 4 ? (
           <>
             <DialogHeader className="p-6 border-b border-border-subtle bg-layer-2">
               <div className="flex items-center gap-3">
@@ -335,6 +335,9 @@ export default function GuichetRapide({ open, onOpenChange, initialCitoyen = nul
               {/* Étape 5 — Formulaire dédié (Résidence ou Mariage) */}
               {step === 5 && formData.type_document === 'residence_certificate' && (
                 <FormulaireResidence
+                  citoyenId={citoyen.id}
+                  citoyen={citoyen}
+                  paymentData={{ mode: formData.paiement_mode, montant: formData.montant }}
                   onSuccess={handleFormulaireDediéSuccess}
                   onCancel={() => setStep(2)}
                 />

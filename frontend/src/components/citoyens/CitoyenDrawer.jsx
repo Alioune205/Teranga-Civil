@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, Zap, FileText, MapPin, Mail, Phone, Calendar, User, ExternalLink, Activity } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useToast } from '@/components/ui/use-toast';
+import { downloadPdf } from '@/api/dossiers';
 
 export default function CitoyenDrawer({ open, onOpenChange, citoyen, onOpenGuichet }) {
   const { toast } = useToast();
@@ -16,6 +17,32 @@ export default function CitoyenDrawer({ open, onOpenChange, citoyen, onOpenGuich
       title: "Copié",
       description: "Le numéro CNI a été copié dans le presse-papiers."
     });
+  };
+
+  const handleDownloadPdf = async (dossier) => {
+    try {
+      toast({
+        title: "Téléchargement",
+        description: "Ouverture du PDF en cours...",
+      });
+      const blob = await downloadPdf(dossier.id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.download = `Certificat_${dossier.reference}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error("Erreur téléchargement PDF:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le PDF.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -143,8 +170,8 @@ export default function CitoyenDrawer({ open, onOpenChange, citoyen, onOpenGuich
                         {new Date(dossier.created_at).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
-                    {dossier.status === 'delivered' && (
-                      <Button variant="ghost" size="icon" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => window.open(`/api/dossiers/${dossier.id}/download-pdf/`, '_blank')}>
+                    {['approved', 'completed', 'delivered'].includes(dossier.status) && (
+                      <Button variant="ghost" size="icon" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDownloadPdf(dossier)}>
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     )}

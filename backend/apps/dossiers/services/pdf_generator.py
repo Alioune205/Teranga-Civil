@@ -229,12 +229,12 @@ def _draw_residence_pdf_content(p, width, height, dossier, officier, timbre_ref,
     y = height - 2 * cm
     p.setFillColor(NOIR)
     p.setFont("Helvetica-Bold", 11)
-    p.drawCentredString(5 * cm, y, "Un Peuple - Un But - Une Foi")
+    p.drawCentredString(5 * cm, y, dossier.commune.devise if dossier.commune and dossier.commune.devise else "Un Peuple - Un But - Une Foi")
     y -= 0.6 * cm
     p.setFont("Helvetica-Bold", 14)
     p.setFillColor(BLEU_FONCE)
     region = dossier.commune.region if dossier.commune and dossier.commune.region else "DAKAR"
-    p.drawCentredString(5 * cm, y, f"REGION DE {region.upper()}")
+    p.drawCentredString(5 * cm, y, f"REGION DE {dossier.commune.region.upper() if dossier.commune and dossier.commune.region else region.upper()}")
     y -= 0.5 * cm
     p.setFont("Helvetica-Bold", 11)
     commune_name = dossier.commune.name if dossier.commune else "INCONNUE"
@@ -273,10 +273,11 @@ def _draw_residence_pdf_content(p, width, height, dossier, officier, timbre_ref,
         name='Center', fontName='Helvetica', fontSize=19, leading=28, alignment=TA_CENTER
     )
     
+    quartier_text = f" au quartier {quartier}" if quartier and quartier.strip() else ""
     texte_complet = (
         f"Nous soussigné(e) Maire de la Commune de {commune_name.capitalize()} certifions "
         f"que {nom_complet} né(e) le {date_naissance} à {lieu_naissance} et qu'il (elle) "
-        f"réside à {adresse} au quartier {quartier} depuis {date_installation}."
+        f"réside à {adresse}{quartier_text} depuis {date_installation}."
     )
     
     para = Paragraph(texte_complet, style_center)
@@ -399,7 +400,7 @@ def _draw_mariage_pdf_content(p, width, height, dossier, officier, timbre_ref,
     p.setFont("Helvetica-Bold", 10)
     p.drawString(14 * cm, height - 2 * cm, "REPUBLIQUE DU SENEGAL")
     p.setFont("Helvetica", 10)
-    p.drawString(14 * cm, height - 2.5 * cm, "Un Peuple - Un But - Une Foi")
+    p.drawString(14 * cm, height - 2.5 * cm, dossier.commune.devise if dossier.commune and dossier.commune.devise else "Un Peuple - Un But - Une Foi")
 
     # Informations Registre
     y_reg = height - 6.0 * cm
@@ -591,7 +592,7 @@ def _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
     p.setFont("Helvetica-Bold", 10)
     p.drawString(14 * cm, height - 2 * cm, "REPUBLIQUE DU SENEGAL")
     p.setFont("Helvetica", 10)
-    p.drawString(14 * cm, height - 2.5 * cm, "Un Peuple - Un But - Une Foi")
+    p.drawString(14 * cm, height - 2.5 * cm, dossier.commune.devise if dossier.commune and dossier.commune.devise else "Un Peuple - Un But - Une Foi")
     
     # ---------------- TITRE ----------------
     y_titre = height - 6.5 * cm
@@ -980,31 +981,17 @@ def generate_signed_certificate(dossier, officier):
     # --- 1. Créer le timbre fiscal ---
     timbre = TimbreFiscal.objects.create(is_used=True)
 
-    # --- 2. Résoudre les chemins des cachets ---
-    # Map commune codes to folder names
-    commune_folder_map = {
-        'DKR-PLT': 'dakar_plateau',
-        'DKR-KMS': 'keur_massar',
-        'THS-NDG': 'ndiaganiao'
-    }
-    
     cachet_communal_path = ''
     signature_officier_path = ''
     cachet_nominal_path = ''
 
-    if dossier.commune and dossier.commune.code in commune_folder_map:
-        folder = commune_folder_map[dossier.commune.code]
-        folder_path = os.path.join(ASSETS_DIR, folder)
-        
-        # On cherche dynamiquement les fichiers PNG correspondants dans le dossier
-        if os.path.exists(folder_path):
-            for file in os.listdir(folder_path):
-                if file.startswith('Cachet_Communal') and file.endswith('.png'):
-                    cachet_communal_path = os.path.join(folder_path, file)
-                elif file.startswith('Signarure_Officier') and file.endswith('.png'):
-                    signature_officier_path = os.path.join(folder_path, file)
-                elif file.startswith('Cachet_Nominal') and file.endswith('.png'):
-                    cachet_nominal_path = os.path.join(folder_path, file)
+    if dossier.commune:
+        if dossier.commune.chemin_cachet_communal:
+            cachet_communal_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_cachet_communal)
+        if dossier.commune.chemin_signature_officier:
+            signature_officier_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_signature_officier)
+        if dossier.commune.chemin_cachet_nominal:
+            cachet_nominal_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_cachet_nominal)
                     
     # FALLBACK FOR DEMO/DEV: If cachets are still missing, use dakar_plateau as fallback
     if not cachet_communal_path or not signature_officier_path or not cachet_nominal_path:

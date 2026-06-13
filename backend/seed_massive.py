@@ -94,14 +94,14 @@ def seed_massive():
 
     # 25 en traitement (status='in_review' ou 'generated')
     for _ in range(25):
-        d = Dossier.objects.create(type=random.choice(types), status=random.choice([Dossier.Status.IN_REVIEW, Dossier.Status.GENERATED]), citizen=citoyen, commune=commune)
+        d = Dossier.objects.create(type=random.choice(types), status=random.choice([Dossier.Status.IN_REVIEW, Dossier.Status.APPROVED]), citizen=citoyen, commune=commune)
         d.created_at = now - timedelta(days=random.randint(1, 5))
         d.save()
         dossiers_traitement.append(d)
 
     # 10 terminés (status='delivered')
     for _ in range(10):
-        d = Dossier.objects.create(type=random.choice(types), status=Dossier.Status.DELIVERED, citizen=citoyen, commune=commune)
+        d = Dossier.objects.create(type=random.choice(types), status=Dossier.Status.COMPLETED, citizen=citoyen, commune=commune)
         d.created_at = now - timedelta(days=random.randint(5, 15))
         d.completed_at = d.created_at + timedelta(days=random.randint(1, 4))
         d.save()

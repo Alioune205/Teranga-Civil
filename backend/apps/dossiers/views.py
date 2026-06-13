@@ -53,15 +53,28 @@ class DossierViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Dossier.objects.select_related(
-            'citizen', 'assigned_agent', 'commune'
+            'citizen', 'assigned_agent', 'commune', 'citoyen_guichet'
         ).prefetch_related('comments', 'documents')
 
         if user.role == 'citizen':
-            return qs.filter(citizen=user)
+            from django.db.models import Q
+            q = Q(citizen=user)
+            cni = getattr(user.profile, 'cni_number', None) if hasattr(user, 'profile') else None
+            if cni:
+                q |= Q(citoyen_guichet__numero_cni=cni)
+            if user.phone:
+                q |= Q(citoyen_guichet__telephone=user.phone)
+            if user.email:
+                q |= Q(citoyen_guichet__email=user.email)
+            return qs.filter(q)
         elif user.role == 'super_admin':
             return qs.all()
         elif user.role in ['reception_agent', 'verification_agent', 'approval_agent', 'agent']:
-            return qs.filter(assigned_agent=user)
+            from django.db.models import Q
+            q = Q(assigned_agent=user)
+            if user.commune:
+                q |= Q(commune=user.commune)
+            return qs.filter(q)
         elif user.is_admin_staff and user.commune:
             return qs.filter(commune=user.commune)
         return qs.none()
@@ -277,13 +290,13 @@ class DossierViewSet(viewsets.ModelViewSet):
         """POST /api/dossiers/{id}/approve/ — Approve the dossier and generate signed certificate."""
         dossier = self.get_object()
 
-        if dossier.status not in [Dossier.Status.IN_REVIEW, Dossier.Status.GENERATED]:
+        if dossier.status not in [Dossier.Status.IN_REVIEW, Dossier.Status.APPROVED]:
             return error_response(
-                message='Seul un dossier en vérification ou généré peut être approuvé.',
+                message='Seul un dossier en vérification peut être approuvé.',
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        dossier.status = Dossier.Status.VALIDATED
+        dossier.status = Dossier.Status.APPROVED
         dossier.completed_at = timezone.now()
         dossier.save(update_fields=['status', 'completed_at', 'updated_at'])
 
@@ -333,13 +346,13 @@ class DossierViewSet(viewsets.ModelViewSet):
         """POST /api/dossiers/{id}/complete/ — Mark as completed."""
         dossier = self.get_object()
 
-        if dossier.status != Dossier.Status.VALIDATED:
+        if dossier.status != Dossier.Status.APPROVED:
             return error_response(
                 message='Seul un dossier approuvé peut être marqué comme terminé.',
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        dossier.status = Dossier.Status.DELIVERED
+        dossier.status = Dossier.Status.COMPLETED
         dossier.save(update_fields=['status', 'updated_at'])
 
         return success_response(
@@ -354,7 +367,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         from django.http import FileResponse
         dossier = self.get_object()
 
-        if dossier.status not in [Dossier.Status.VALIDATED, Dossier.Status.DELIVERED, Dossier.Status.GENERATED]:
+        if dossier.status not in [Dossier.Status.APPROVED, Dossier.Status.COMPLETED]:
             return error_response(
                 message="Le document PDF n'est pas encore disponible.",
                 status_code=status.HTTP_400_BAD_REQUEST

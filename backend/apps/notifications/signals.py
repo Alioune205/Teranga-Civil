@@ -134,7 +134,7 @@ def dossier_status_change_notification(sender, instance, created, **kwargs):
             data={'dossier_id': str(instance.id)}
         )
 
-    elif instance.status == Dossier.Status.VALIDATED:
+    elif instance.status == Dossier.Status.APPROVED:
         send_notification_async(
             user=instance.citizen,
             title="Dossier approuvé ✅",
@@ -152,7 +152,7 @@ def dossier_status_change_notification(sender, instance, created, **kwargs):
             data={'dossier_id': str(instance.id)}
         )
 
-    elif instance.status == Dossier.Status.DELIVERED:
+    elif instance.status == Dossier.Status.COMPLETED:
         send_notification_async(
             user=instance.citizen,
             title="Document disponible 🎉",

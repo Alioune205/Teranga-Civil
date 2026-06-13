@@ -5,7 +5,8 @@
 // venu physiquement au guichet.
 // =============================================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getCitoyenById } from '@/services/citoyenApi';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import axiosClient from '@/api/axiosClient';
@@ -16,7 +17,9 @@ import {
   FileImage,
   X,
   Home,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
+  UserCheck
 } from 'lucide-react';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -25,9 +28,14 @@ const DUREE_OPTIONS = [
 ];
 
 // ─── Composant Principal ─────────────────────────────────────────────────────
-export default function FormulaireResidence({ onSuccess, onCancel }) {
+export default function FormulaireResidence({ citoyenId, citoyen: citoyenProp, paymentData, onSuccess, onCancel }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  // ─── États pour le chargement du citoyen ────────────────────────────────
+  const [loadingCitoyen, setLoadingCitoyen] = useState(false);
+  const [errorCitoyen, setErrorCitoyen] = useState(null);
+  const [champsPreremplis, setChampsPreremplis] = useState([]);
 
   // État du formulaire — champs textuels
   const [formData, setFormData] = useState({
@@ -45,6 +53,50 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
 
   // État des erreurs de validation par champ
   const [erreurs, setErreurs] = useState({});
+
+  // ─── Préremplissage depuis un objet citoyen ──────────────────────────────
+  const prefillDepuisCitoyen = (c) => {
+    const nomComplet = c.nom_complet || `${c.prenom || ''} ${c.nom || ''}`.trim();
+    const adresseParts = [c.adresse, c.quartier, c.commune?.name].filter(Boolean);
+    const adresse = adresseParts.join(', ');
+    const nouveauxChamps = [];
+
+    setFormData(prev => {
+      const updated = { ...prev };
+      if (nomComplet) { updated.nom_complet = nomComplet; nouveauxChamps.push('nom_complet'); }
+      if (c.date_naissance) { updated.date_naissance = c.date_naissance; nouveauxChamps.push('date_naissance'); }
+      if (adresse) { updated.adresse_residence = adresse; nouveauxChamps.push('adresse_residence'); }
+      return updated;
+    });
+    setChampsPreremplis(nouveauxChamps);
+  };
+
+  // ─── useEffect : préremplissage au montage ───────────────────────────────
+  useEffect(() => {
+    const chargerCitoyen = async () => {
+      // 1. Pré-remplissage immédiat depuis la prop (données liste déjà disponibles)
+      //    Permet d'afficher nom/date sans attendre le réseau
+      if (citoyenProp) {
+        prefillDepuisCitoyen(citoyenProp);
+      }
+
+      // 2. Toujours appeler le détail API pour obtenir adresse + quartier
+      //    (non inclus dans le sérialiseur de liste)
+      if (!citoyenId) return;
+      setLoadingCitoyen(true);
+      setErrorCitoyen(null);
+      try {
+        const data = await getCitoyenById(citoyenId);
+        prefillDepuisCitoyen(data);   // écrase/complète avec les données complètes
+      } catch (err) {
+        setErrorCitoyen('Impossible de charger les informations du citoyen.');
+      } finally {
+        setLoadingCitoyen(false);
+      }
+    };
+    chargerCitoyen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [citoyenId]);
 
   // ─── Gestion des changements de champs textuels ──────────────────────────
   const handleChange = (e) => {
@@ -118,7 +170,14 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
     try {
       // Construction du FormData pour l'envoi multipart (images + données)
       const payload = new FormData();
-      payload.append('type_acte', 'residence');
+      payload.append('type_document', 'residence_certificate');
+      payload.append('motif', 'Guichet Rapide');
+      if (paymentData) {
+        payload.append('paiement_mode', paymentData.mode || 'Espèces');
+        payload.append('montant', paymentData.montant || 0);
+      }
+      
+      // Metadata specific fields
       payload.append('nom_complet', formData.nom_complet.trim());
       payload.append('date_naissance', formData.date_naissance);
       payload.append('adresse_residence', formData.adresse_residence.trim());
@@ -132,14 +191,15 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
       payload.append('pieces_jointes', fichiers.cni);
       payload.append('pieces_jointes', fichiers.attestation_delegue);
 
-      // Envoi POST vers l'API backend
-      const response = await axiosClient.post('/api/dossiers/', payload, {
+      // Envoi POST vers l'API backend guichet
+      const url = citoyenId ? `/api/citoyens/${citoyenId}/guichet/` : '/api/dossiers/';
+      const response = await axiosClient.post(url, payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       toast({
         title: 'Succès',
-        description: 'Le certificat de résidence a été enregistré avec succès.',
+        description: 'Le certificat de résidence a été généré avec succès.',
         className: 'bg-emerald-50 text-emerald-900 border-emerald-200'
       });
 
@@ -237,17 +297,41 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
       {/* En-tête du formulaire */}
       <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl">
         <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-          <Home className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          {loadingCitoyen
+            ? <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+            : champsPreremplis.length > 0
+              ? <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              : <Home className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          }
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-semibold text-blue-800 dark:text-blue-300 font-jakarta">
             Certificat de Résidence
           </h3>
-          <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
-            Remplissez les informations du demandeur et joignez les pièces justificatives.
-          </p>
+          {loadingCitoyen ? (
+            <p className="text-sm text-blue-600/80 dark:text-blue-400/80 animate-pulse">
+              Chargement des informations du citoyen...
+            </p>
+          ) : champsPreremplis.length > 0 ? (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Informations préremplies depuis le dossier citoyen
+            </p>
+          ) : (
+            <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
+              Remplissez les informations du demandeur et joignez les pièces justificatives.
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Bannière d'erreur de chargement citoyen */}
+      {errorCitoyen && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {errorCitoyen} Veuillez saisir les informations manuellement.
+        </div>
+      )}
 
       {/* Section — Informations personnelles */}
       <div className="space-y-1">
@@ -261,15 +345,22 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
         {/* Nom complet */}
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-text-200">Nom complet *</label>
-          <input
-            type="text"
-            name="nom_complet"
-            value={formData.nom_complet}
-            onChange={handleChange}
-            className={`w-full p-2.5 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow ${erreurs.nom_complet ? 'border-red-400' : 'border-border-strong'
+          <div className="relative">
+            <input
+              type="text"
+              name="nom_complet"
+              value={formData.nom_complet}
+              onChange={handleChange}
+              disabled={loadingCitoyen}
+              className={`w-full p-2.5 pr-10 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow disabled:opacity-60 ${
+                erreurs.nom_complet ? 'border-red-400' : champsPreremplis.includes('nom_complet') ? 'border-emerald-400' : 'border-border-strong'
               }`}
-            placeholder="Ex : Amadou Ndiaye"
-          />
+              placeholder="Ex : Amadou Ndiaye"
+            />
+            {champsPreremplis.includes('nom_complet') && !erreurs.nom_complet && (
+              <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500 pointer-events-none" />
+            )}
+          </div>
           {erreurs.nom_complet && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" /> {erreurs.nom_complet}
@@ -280,14 +371,21 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
         {/* Date de naissance */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-text-200">Date de naissance *</label>
-          <input
-            type="date"
-            name="date_naissance"
-            value={formData.date_naissance}
-            onChange={handleChange}
-            className={`w-full p-2.5 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow ${erreurs.date_naissance ? 'border-red-400' : 'border-border-strong'
+          <div className="relative">
+            <input
+              type="date"
+              name="date_naissance"
+              value={formData.date_naissance}
+              onChange={handleChange}
+              disabled={loadingCitoyen}
+              className={`w-full p-2.5 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow disabled:opacity-60 ${
+                erreurs.date_naissance ? 'border-red-400' : champsPreremplis.includes('date_naissance') ? 'border-emerald-400' : 'border-border-strong'
               }`}
-          />
+            />
+            {champsPreremplis.includes('date_naissance') && !erreurs.date_naissance && (
+              <CheckCircle2 className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500 pointer-events-none" />
+            )}
+          </div>
           {erreurs.date_naissance && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" /> {erreurs.date_naissance}
@@ -320,15 +418,22 @@ export default function FormulaireResidence({ onSuccess, onCancel }) {
         {/* Adresse de résidence */}
         <div className="space-y-2 md:col-span-2">
           <label className="text-sm font-medium text-text-200">Adresse de résidence *</label>
-          <textarea
-            name="adresse_residence"
-            value={formData.adresse_residence}
-            onChange={handleChange}
-            rows={2}
-            className={`w-full p-2.5 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow resize-none ${erreurs.adresse_residence ? 'border-red-400' : 'border-border-strong'
+          <div className="relative">
+            <textarea
+              name="adresse_residence"
+              value={formData.adresse_residence}
+              onChange={handleChange}
+              disabled={loadingCitoyen}
+              rows={2}
+              className={`w-full p-2.5 pr-8 bg-layer-3 border rounded-lg text-text-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-shadow resize-none disabled:opacity-60 ${
+                erreurs.adresse_residence ? 'border-red-400' : champsPreremplis.includes('adresse_residence') ? 'border-emerald-400' : 'border-border-strong'
               }`}
-            placeholder="Ex : Quartier Médina, Rue 12 x 15, Dakar"
-          />
+              placeholder="Ex : Quartier Médina, Rue 12 x 15, Dakar"
+            />
+            {champsPreremplis.includes('adresse_residence') && !erreurs.adresse_residence && (
+              <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-emerald-500 pointer-events-none" />
+            )}
+          </div>
           {erreurs.adresse_residence && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" /> {erreurs.adresse_residence}

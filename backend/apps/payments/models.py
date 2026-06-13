@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 class PaymentType(models.TextChoices):
     CARD = 'card', 'Carte bancaire (CB/Visa/Mastercard)'
@@ -14,8 +15,10 @@ class PaymentType(models.TextChoices):
 class PaymentStatus(models.TextChoices):
     PENDING = 'pending', 'En attente'
     SUCCESS = 'success', 'Validé'
+    PAID = 'paid', 'Payé'
     FAILED = 'failed', 'Échoué'
     REFUNDED = 'refunded', 'Remboursé'
+    CANCELLED = 'cancelled', 'Annulé'
 
 class PaymentTransaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -27,6 +30,43 @@ class PaymentTransaction(models.Model):
     payer_name = models.CharField(max_length=150, verbose_name="Nom du payeur")
     payer_id = models.CharField(max_length=100, verbose_name="Identifiant du payeur")
     service_label = models.CharField(max_length=200, verbose_name="Libellé du service")
+    
+    # Nouveaux champs pour le paiement au guichet
+    dossier = models.ForeignKey(
+        'dossiers.Dossier',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments',
+        verbose_name="Dossier"
+    )
+    agent = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments_received',
+        verbose_name="Agent"
+    )
+    receipt_number = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name="Numéro de reçu"
+    )
+    transaction_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Référence externe"
+    )
+    comment = models.TextField(
+        blank=True,
+        default='',
+        verbose_name="Commentaire"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
 
@@ -41,6 +81,7 @@ class PaymentTransaction(models.Model):
         # Puisque self.pk est généré par défaut, on vérifie s'il existe déjà dans la base
         if PaymentTransaction.objects.filter(pk=self.pk).exists():
             original = PaymentTransaction.objects.get(pk=self.pk)
+            # Ne vérifier que les champs qui ne doivent pas changer
             fields_to_check = [
                 'id', 'reference', 'amount', 'currency', 'payment_type',
                 'payer_name', 'payer_id', 'service_label', 'created_at'

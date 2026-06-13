@@ -68,9 +68,9 @@ class RegisterView(GenericAPIView):
     @extend_schema(
         tags=['Auth'],
         summary='Inscription citoyen',
-        description='Crée un nouveau compte citoyen et retourne les tokens JWT.',
+        description='Crée un nouveau compte citoyen et déclenche l\'envoi d\'un OTP.',
         responses={
-            201: OpenApiResponse(description='Inscription réussie'),
+            201: OpenApiResponse(description='Inscription réussie, OTP envoyé'),
             400: OpenApiResponse(description='Données invalides'),
         },
     )
@@ -79,24 +79,43 @@ class RegisterView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generate tokens for the new user
-        refresh = RefreshToken.for_user(user)
+        # Determine identifier (email or phone)
+        identifier = user.email if user.email else user.phone
+
+        # Trigger OTP send
+        import random
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.users.models import OTPCode
+        
+        code = str(random.randint(100000, 999999))
+        expires_at = timezone.now() + timedelta(minutes=10)
+
+        OTPCode.objects.create(identifier=identifier, code=code, expires_at=expires_at)
+        
+        if '@' in identifier:
+            try:
+                from apps.services.communication import SendGridEmailService
+                email_service = SendGridEmailService()
+                html_content = f"<h3>Code de vérification — TERANGA CIVIL</h3><p>Votre code de vérification OTP est : <strong>{code}</strong>.</p><p>Il expire dans 10 minutes.</p>"
+                email_service.send_email(to_email=identifier, subject="Code de vérification — TERANGA CIVIL", html_content=html_content)
+            except Exception as e:
+                # Log but do not fail registration
+                pass
+        else:
+            try:
+                from apps.services.communication import TwilioSMSService
+                sms_service = TwilioSMSService()
+                sms_service.send_sms(to_phone=identifier, message=f"TERANGA CIVIL: Votre code de vérification OTP est {code}. Valide 10 minutes.")
+            except Exception as e:
+                pass
 
         return created_response(
             data={
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'user': {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'full_name': user.full_name,
-                    'role': user.role,
-                    'is_verified': user.is_verified,
-                },
+                'needs_otp': True,
+                'identifier': identifier,
             },
-            message='Inscription réussie.',
+            message='Inscription réussie. Veuillez vérifier votre compte avec le code OTP.',
         )
 
 
