@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCitoyens } from '@/services/citoyenApi';
 import { getCommuneList } from '@/api/communes';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Search, Plus, Zap, Users, Filter, X } from 'lucide-react';
 import CitoyenDrawer from '@/components/citoyens/CitoyenDrawer';
@@ -10,6 +11,7 @@ import NouveauCitoyen from '@/components/citoyens/NouveauCitoyen';
 
 export default function CitoyenRepertoire() {
   const { toast } = useToast();
+  const { role } = useAuth();
   const [citoyens, setCitoyens] = useState([]);
   const [communes, setCommunes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,21 +121,25 @@ export default function CitoyenRepertoire() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              className="border-primary text-primary hover:bg-primary/5 shadow-sm"
-              onClick={() => setIsNouveauOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau citoyen
-            </Button>
-            <Button 
-              className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm font-medium"
-              onClick={() => handleOpenGuichet(null)}
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              Guichet Rapide
-            </Button>
+            {role !== 'civil_admin_supervisor' && (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="border-primary text-primary hover:bg-primary/5 shadow-sm"
+                  onClick={() => setIsNouveauOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouveau citoyen
+                </Button>
+                <Button 
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm font-medium"
+                  onClick={() => handleOpenGuichet(null)}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Guichet Rapide
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -261,15 +267,17 @@ export default function CitoyenRepertoire() {
                           >
                             Voir fiche
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-                            onClick={() => handleOpenGuichet(citoyen)}
-                            title="Guichet Rapide"
-                          >
-                            <Zap className="h-4 w-4" />
-                          </Button>
+                          {role !== 'civil_admin_supervisor' && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                              onClick={() => handleOpenGuichet(citoyen)}
+                              title="Guichet Rapide"
+                            >
+                              <Zap className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
