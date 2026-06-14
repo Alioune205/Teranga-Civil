@@ -335,7 +335,11 @@ export default function Dossiers() {
               </span>
             );
           }
-          return <AutoAssignButton dossier={row.original} onAssign={refresh} />;
+          return ['super_admin', 'civil_admin'].includes(role) ? (
+            <AutoAssignButton dossier={row.original} onAssign={refresh} />
+          ) : (
+            <span className="text-sm text-slate-400 italic">Non assigné</span>
+          );
         },
       },
       {
@@ -369,14 +373,16 @@ export default function Dossiers() {
                 <DropdownMenuItem onClick={() => navigate(`/dossiers/${dossier.id}`)}>
                   <Eye className="h-4 w-4 mr-2" /> Voir
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSelectedDossier(dossier);
-                    setAssignModalOpen(true);
-                  }}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" /> Assigner agent
-                </DropdownMenuItem>
+                {['super_admin', 'civil_admin'].includes(role) && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedDossier(dossier);
+                      setAssignModalOpen(true);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" /> Assigner agent
+                  </DropdownMenuItem>
+                )}
                 {['reception_agent', 'civil_admin', 'super_admin'].includes(role) && dossier.status === 'draft' && (
                   <DropdownMenuItem
                     onClick={() => {
@@ -388,12 +394,12 @@ export default function Dossiers() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                {dossier.status === 'in_review' && (
+                {['super_admin', 'civil_admin', 'agent'].includes(role) && dossier.status === 'in_review' && (
                   <DropdownMenuItem onClick={() => handleApprove(dossier)}>
                     <CheckCircle className="h-4 w-4 mr-2 text-success" /> Valider
                   </DropdownMenuItem>
                 )}
-                {(dossier.status === 'submitted' || dossier.status === 'in_review') && (
+                {['super_admin', 'civil_admin', 'agent'].includes(role) && (dossier.status === 'submitted' || dossier.status === 'in_review') && (
                   <DropdownMenuItem
                     onClick={() => {
                       setSelectedDossier(dossier);
@@ -418,7 +424,7 @@ export default function Dossiers() {
         },
       },
     ],
-    [navigate, refresh]
+    [navigate, refresh, role]
   );
 
   const table = useReactTable({
