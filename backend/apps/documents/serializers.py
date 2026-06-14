@@ -20,6 +20,8 @@ class DocumentSerializer(serializers.ModelSerializer):
             'original_filename',
             'file_type',
             'file_size',
+            'mime_type',
+            'sha256_hash',
             'description',
             'uploaded_by',
             'uploaded_by_name',
@@ -30,6 +32,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'original_filename', 'file_type', 'file_size',
+            'mime_type', 'sha256_hash',
             'uploaded_by', 'uploaded_by_name', 'dossier_reference',
             'ocr_status', 'ocr_text', 'created_at', 'updated_at',
         ]

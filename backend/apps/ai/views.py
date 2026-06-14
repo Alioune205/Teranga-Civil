@@ -41,7 +41,7 @@ class OcrExtractView(APIView):
 
     @extend_schema(tags=['AI & OCR'], summary="Extraire les données d'un document via OCR (upload ou caméra)")
     def post(self, request, *args, **kwargs):
-        dossier_type = request.data.get('dossier_type')
+        dossier_type = request.data.get('dossier_type', 'cni')
         image_base64 = request.data.get('image_base64')
         file_obj = request.FILES.get('document')
 
@@ -52,27 +52,24 @@ class OcrExtractView(APIView):
                 'hint': 'Envoyez "document" (fichier) ou "image_base64" (caméra).'
             }, status=400)
 
-        # ── Vérification des doublons ──
-        if dossier_type:
-            duplicate_check = check_dossier_duplicate(request.user, dossier_type)
-            if duplicate_check.get('is_duplicate'):
-                return Response({
-                    'error': 'Un dossier identique est déjà en cours de traitement.',
-                    'details': duplicate_check
-                }, status=400)
+        # NOTE : Le check_dossier_duplicate est intentionnellement supprimé ici.
+        # L'OCR est une étape de pré-remplissage (scan avant création du dossier).
+        # Bloquer un appel OCR parce qu'un dossier du même type existe déjà est un
+        # faux positif qui empêche l'utilisateur de pré-remplir un nouveau formulaire.
+        # La vérification de doublon dossier se fait à la création effective du dossier.
 
         # ── Extraction selon le mode ──
         if image_base64:
             # MODE 2 : Image capturée par la caméra du frontend (base64)
             source = 'camera'
             extracted_text = extract_text_from_base64(image_base64)
-            extracted_data = extract_cni_data_from_base64(image_base64)
+            extracted_data = extract_cni_data_from_base64(image_base64, dossier_type=dossier_type)
         else:
             # MODE 1 : Fichier uploadé (image ou PDF)
             source = 'upload'
             extracted_text = extract_text_from_image(file_obj)
             file_obj.seek(0)
-            extracted_data = extract_cni_data(file_obj)
+            extracted_data = extract_cni_data(file_obj, dossier_type=dossier_type)
 
         # ── Validation intelligente ──
         validation_result = None
@@ -81,6 +78,7 @@ class OcrExtractView(APIView):
 
         return Response({
             'source': source,
+            'dossier_type': dossier_type,
             'extracted_text': extracted_text,
             'extracted_data': extracted_data,
             'validation': validation_result

@@ -83,8 +83,23 @@ class DossierCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        validated_data['citizen'] = self.context['request'].user
+        request = self.context['request']
+        validated_data['citizen'] = request.user
         validated_data['status'] = Dossier.Status.DRAFT
+
+        # Persister is_for_third_party dans metadata (fix bilan intégration 14/06)
+        # La valeur est envoyée au top-level du payload par le mobile.
+        is_for_third_party_raw = request.data.get('is_for_third_party', False)
+        if isinstance(is_for_third_party_raw, str):
+            is_for_third_party = is_for_third_party_raw.lower() in ('true', '1', 'yes')
+        else:
+            is_for_third_party = bool(is_for_third_party_raw)
+
+        # Fusionner dans metadata sans écraser les données existantes
+        metadata = validated_data.get('metadata', {})
+        metadata['is_for_third_party'] = is_for_third_party
+        validated_data['metadata'] = metadata
+
         return super().create(validated_data)
 
 

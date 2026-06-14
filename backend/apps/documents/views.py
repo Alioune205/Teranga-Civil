@@ -310,9 +310,16 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         # ----------------------------------------------------------------
         # ÉTAPE 5 : Enregistrement en base de données
-        # Le hash calculé est passé directement pour éviter un double calcul dans save()
+        # Le hash calculé et le MIME type sont passés directement pour éviter
+        # un double calcul dans save().
         # ----------------------------------------------------------------
-        document = serializer.save(sha256_hash=file_hash)
+        # Récupérer le MIME type déclaré par le client (ou inféré par Django)
+        file_mime = getattr(uploaded_file, 'content_type', '') or ''
+
+        document = serializer.save(
+            sha256_hash=file_hash,
+            mime_type=file_mime,
+        )
 
         # Journalisation de l'upload réussi
         logger.info(
@@ -396,18 +403,18 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
             if not settings.DEBUG:
                 # Production: délégation à Nginx via X-Accel-Redirect
-                response = HttpResponse(content_type=instance.mime_type or 'application/octet-stream')
+                content_type = instance.mime_type or 'application/octet-stream'
+                response = HttpResponse(content_type=content_type)
                 response['X-Accel-Redirect'] = instance.file.url
-                # On peut rajouter Content-Disposition si on veut forcer le téléchargement,
-                # mais en inline ça permet au frontend de l'afficher via blob URL.
                 response['Content-Disposition'] = f'inline; filename="{instance.original_filename}"'
             else:
                 # Développement: FileResponse direct
+                content_type = instance.mime_type or 'application/octet-stream'
                 response = FileResponse(
                     instance.file.open('rb'),
                     as_attachment=False,
                     filename=instance.original_filename,
-                    content_type=instance.mime_type or 'application/octet-stream',
+                    content_type=content_type,
                 )
 
             # Journalisation du téléchargement réussi

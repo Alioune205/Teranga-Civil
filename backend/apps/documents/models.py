@@ -77,6 +77,21 @@ class Document(TimeStampedModel):
         default='',
         verbose_name='Texte OCR',
     )
+    # Champs intégrité & sécurité (ajoutés fix bilan intégration 14/06)
+    sha256_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name='Hash SHA-256',
+        help_text='Empreinte SHA-256 du fichier uploadé (anti-doublon).',
+    )
+    mime_type = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name='Type MIME',
+        help_text='Type MIME détecté lors de l\'upload (ex: image/jpeg, application/pdf).',
+    )
 
     class Meta:
         verbose_name = 'Document'
@@ -86,6 +101,7 @@ class Document(TimeStampedModel):
             models.Index(fields=['dossier']),
             models.Index(fields=['uploaded_by']),
             models.Index(fields=['ocr_status']),
+            models.Index(fields=['sha256_hash']),
         ]
 
     def __str__(self):

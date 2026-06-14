@@ -210,13 +210,113 @@ def _parse_cni_fields(text: str) -> dict:
     return data
 
 
-def extract_cni_data(file_obj) -> dict:
-    """Extrait les données structurées d'une CNI depuis un fichier image ou PDF."""
+def _parse_extrait_naissance_fields(text: str) -> dict:
+    """
+    Parse les champs structurés d'un extrait d'acte de naissance
+    (registre civil sénégalais) à partir du texte brut extrait par OCR.
+
+    Champs extraits :
+      - numero_registre   : numéro de l'acte dans le registre
+      - annee_registre    : année du registre
+      - commune           : nom de la commune de déclaration
+      - date_naissance    : date de naissance de la personne concernée
+      - nom               : nom de famille
+      - prenom            : prénoms
+    """
+    data = {
+        "numero_registre": "",
+        "annee_registre": "",
+        "commune": "",
+        "date_naissance": "",
+        "nom": "",
+        "prenom": "",
+    }
+
+    # --- NUMÉRO D'ACTE / REGISTRE ---
+    match = re.search(
+        r'(?:N[°o]?\s*(?:acte|registre|de l[\'’]acte)?)[\s:\-]*(\d+)',
+        text, re.IGNORECASE
+    )
+    if match:
+        data["numero_registre"] = match.group(1).strip()
+    else:
+        # Format court ex: "Acte n° 42" ou "N° 042"
+        match = re.search(r'\bN[°o]\.?\s*(\d{1,5})\b', text, re.IGNORECASE)
+        if match:
+            data["numero_registre"] = match.group(1).strip()
+
+    # --- ANNÉE DU REGISTRE ---
+    match = re.search(
+        r'(?:année|an)[\s:\-]*(\d{4})\b',
+        text, re.IGNORECASE
+    )
+    if match:
+        data["annee_registre"] = match.group(1).strip()
+    else:
+        # Chercher une année 4 chiffres dans un contexte registre
+        match = re.search(r'registre[^\d]*(\d{4})', text, re.IGNORECASE)
+        if match:
+            data["annee_registre"] = match.group(1).strip()
+
+    # --- COMMUNE ---
+    match = re.search(
+        r'(?:commune|mairie|centre d[\'\u2019]état civil)[\s:de]+([ \w\-\u00e0-\u00ff]+)',
+        text, re.IGNORECASE
+    )
+    if match:
+        data["commune"] = match.group(1).strip().split('\n')[0]
+
+    # --- DATE DE NAISSANCE ---
+    match = re.search(
+        r'(?:né\(e\) le|date de naissance|née? le)[\s:\-]+(\d{2}[/\-\s]\d{2}[/\-\s]\d{4})',
+        text, re.IGNORECASE
+    )
+    if match:
+        data["date_naissance"] = match.group(1).strip().replace('-', '/').replace(' ', '/')
+    else:
+        # Fallback : première date trouvée sous format JJ/MM/AAAA
+        dates = re.findall(r'\b(\d{2}/\d{2}/\d{4})\b', text)
+        if dates:
+            data["date_naissance"] = dates[0]
+
+    # --- NOM ---
+    match = re.search(
+        r'(?:^|\n)(?:NOM|Nom)[\s:\n\r]+([A-Z\u00c0-\u00dc][A-Z\u00c0-\u00dc\s\-]+)',
+        text, re.IGNORECASE | re.MULTILINE
+    )
+    if match:
+        data["nom"] = match.group(1).strip().split('\n')[0]
+
+    # --- PRÉNOM ---
+    match = re.search(
+        r'(?:PRÉNOM|Prenom|Prénom|Prénoms)[\s:\n\r]+([A-Z\u00c0-\u00dc][A-Za-z\u00c0-\u00ff\s\-]+)',
+        text, re.IGNORECASE
+    )
+    if match:
+        data["prenom"] = match.group(1).strip().split('\n')[0]
+
+    return data
+
+
+def extract_cni_data(file_obj, dossier_type: str = 'cni') -> dict:
+    """
+    Extrait les données structurées d'un document depuis un fichier image ou PDF.
+
+    Args:
+        file_obj   : fichier uploadé (InMemoryUploadedFile, BytesIO, ou chemin str)
+        dossier_type : type de document à parser :
+                       - 'birth_certificate' → parseur extrait de naissance
+                       - tout autre (ou 'cni') → parseur CNI (défaut)
+    """
     text = extract_text_from_file(file_obj)
+    if dossier_type == 'birth_certificate':
+        return _parse_extrait_naissance_fields(text)
     return _parse_cni_fields(text)
 
 
-def extract_cni_data_from_base64(base64_string: str) -> dict:
-    """Extrait les données structurées d'une CNI depuis une image base64 (caméra)."""
+def extract_cni_data_from_base64(base64_string: str, dossier_type: str = 'cni') -> dict:
+    """Extrait les données structurées depuis une image base64 (caméra)."""
     text = extract_text_from_base64(base64_string)
+    if dossier_type == 'birth_certificate':
+        return _parse_extrait_naissance_fields(text)
     return _parse_cni_fields(text)
