@@ -96,9 +96,11 @@ class DashboardTests(APITestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response['Content-Type'], 'text/csv')
+        # La vue retourne 'text/csv; charset=utf-8' — on vérifie le type MIME seulement
+        self.assertIn('text/csv', response['Content-Type'])
         
-        content = response.content.decode('utf-8')
+        # La vue utilise StreamingHttpResponse — il faut consommer streaming_content
+        content = b''.join(response.streaming_content).decode('utf-8')
         reader = csv.DictReader(StringIO(content))
         rows = list(reader)
         
@@ -118,9 +120,10 @@ class DashboardTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        content = response.content.decode('utf-8')
+        # StreamingHttpResponse — consommer streaming_content
+        content = b''.join(response.streaming_content).decode('utf-8')
         reader = csv.DictReader(StringIO(content))
         rows = list(reader)
         
-        # Aucun dossier n'a été soumis aujourd'hui (ils ont été soumis à now - 2 jours et now - 1 jour)
+        # Aucun dossier n'a été soumis aujourd'hui (soumis à now-2j et now-1j)
         self.assertEqual(len(rows), 0)
