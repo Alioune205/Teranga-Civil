@@ -180,7 +180,7 @@ class RegisterGuichetPaymentView(APIView):
 
     def post(self, request):
         user = request.user
-        if not hasattr(user, 'role') or user.role not in ['reception_agent', 'civil_admin', 'super_admin']:
+        if not hasattr(user, 'role') or user.role not in ['agent', 'civil_admin', 'super_admin']:
             return error_response(message="Vous n'avez pas l'autorisation d'enregistrer des paiements.", status_code=403)
 
         dossier_id = request.data.get('dossier_id')

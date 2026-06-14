@@ -25,7 +25,8 @@ class PaymentGuichetTests(TestCase):
             password="password123",
             first_name="Agent",
             last_name="Réception",
-            role="reception_agent",
+            role="agent",
+            agent_capabilities=["reception"],
             commune=self.commune
         )
         

@@ -39,12 +39,14 @@ def format_duration(duration):
 
 def get_base_queryset(user):
     qs = Dossier.objects.all()
-    if user.role in ['super_admin', 'civil_admin']:
+    if user.role == 'super_admin':
         return qs
-    elif user.role in ['reception_agent', 'verification_agent', 'approval_agent', 'agent']:
+    elif user.role in ['civil_admin', 'civil_admin_supervisor']:
+        if user.commune:
+            return qs.filter(commune=user.commune)
+        return qs.none()
+    elif user.role == 'agent':
         return qs.filter(assigned_agent=user)
-    elif getattr(user, 'is_admin_staff', False) and getattr(user, 'commune', None):
-        return qs.filter(commune=user.commune)
     return qs.none()
 
 class DashboardStatsView(APIView):
@@ -170,6 +172,7 @@ class DashboardStatsView(APIView):
 
 class GlobalStatsView(APIView):
     """API for global statistics."""
+    # Seuls les super admins et superviseurs peuvent voir les stats temporelles/globales avancées
     permission_classes = [IsAuthenticated, IsAdminStaff]
 
     @extend_schema(
@@ -177,6 +180,9 @@ class GlobalStatsView(APIView):
         summary='Statistiques globales'
     )
     def get(self, request):
+        if request.user.role not in ['super_admin', 'civil_admin_supervisor']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accès réservé aux superviseurs et super administrateurs.")
         stats = get_base_queryset(request.user).aggregate(
             total=Count('id'),
             en_cours=Count(
@@ -220,6 +226,9 @@ class PerformanceStatsView(APIView):
         summary='Statistiques de performance'
     )
     def get(self, request):
+        if request.user.role not in ['super_admin', 'civil_admin_supervisor']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accès réservé aux superviseurs et super administrateurs.")
         time_diff = ExpressionWrapper(
             F('completed_at') - F('submitted_at'),
             output_field=FloatField()
@@ -264,6 +273,9 @@ class ActivityStatsView(APIView):
         summary="Statistiques d'activité"
     )
     def get(self, request):
+        if request.user.role not in ['super_admin', 'civil_admin_supervisor']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accès réservé aux superviseurs et super administrateurs.")
         daily = get_base_queryset(request.user).annotate(
             date=TruncDay('created_at')
         ).values('date').annotate(
@@ -300,7 +312,8 @@ class ExportDossiersCSVView(APIView):
     def get(self, request):
         user = request.user
         role = getattr(user, 'role', None)
-        if role not in ['reception_agent', 'verification_agent', 'civil_admin', 'super_admin'] and not getattr(user, 'is_admin_staff', False):
+        # Seuls les super_admin et civil_admin_supervisor peuvent exporter (comme demandé, export = stats avancées)
+        if role not in ['super_admin', 'civil_admin_supervisor']:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Accès refusé.")
 
@@ -380,3 +393,42 @@ class ExportDossiersCSVView(APIView):
         response = StreamingHttpResponse(iter_items(), content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="export_teranga_civil.csv"'
         return response
+
+
+class WorkloadStatsView(APIView):
+    """API for agent workload statistics (for civil_admin & civil_admin_supervisor)."""
+    permission_classes = [IsAuthenticated, IsAdminStaff]
+
+    @extend_schema(
+        tags=['Dashboard'],
+        summary='Charge de travail par agent'
+    )
+    def get(self, request):
+        if request.user.role not in ['super_admin', 'civil_admin', 'civil_admin_supervisor']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accès réservé aux administrateurs.")
+
+        # Récupère tous les dossiers affectés à un agent dans la commune de l'admin
+        qs = get_base_queryset(request.user).filter(assigned_agent__isnull=False)
+        
+        workload = qs.values(
+            'assigned_agent__id',
+            'assigned_agent__first_name',
+            'assigned_agent__last_name'
+        ).annotate(
+            total_dossiers=Count('id'),
+            en_cours=Count('id', filter=Q(status__in=[Dossier.Status.SUBMITTED, Dossier.Status.IN_REVIEW])),
+            termines=Count('id', filter=Q(status__in=[Dossier.Status.APPROVED, Dossier.Status.REJECTED]))
+        ).order_by('-en_cours')
+
+        data = []
+        for item in workload:
+            data.append({
+                'agent_id': item['assigned_agent__id'],
+                'agent_name': f"{item['assigned_agent__first_name']} {item['assigned_agent__last_name']}".strip(),
+                'total_dossiers': item['total_dossiers'],
+                'dossiers_en_cours': item['en_cours'],
+                'dossiers_termines': item['termines']
+            })
+
+        return success_response(data)

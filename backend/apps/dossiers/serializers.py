@@ -265,7 +265,7 @@ class DossierAssignSerializer(serializers.Serializer):
     def validate_agent_id(self, value):
         try:
             agent = User.objects.get(id=value)
-            if agent.role not in ['reception_agent', 'verification_agent', 'civil_admin', 'super_admin']:
+            if agent.role not in ['agent', 'civil_admin', 'civil_admin_supervisor', 'super_admin']:
                 raise serializers.ValidationError(
                     'L\'utilisateur n\'est pas un agent administratif.'
                 )

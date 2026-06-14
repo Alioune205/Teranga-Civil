@@ -20,7 +20,13 @@ class DashboardTests(APITestCase):
         self.commune_dakar = Commune.objects.create(name="Dakar", code="DK01")
         self.admin = User.objects.create_user(
             email="admin@test.com", password="password123",
-            role="civil_admin", first_name="Moussa", last_name="Diallo"
+            role="civil_admin", first_name="Moussa", last_name="Diallo",
+            commune=self.commune_dakar
+        )
+        self.supervisor = User.objects.create_user(
+            email="super@test.com", password="password123",
+            role="civil_admin_supervisor", first_name="Super", last_name="Visor",
+            commune=self.commune_dakar
         )
         self.citizen = User.objects.create_user(
             email="citoyen@test.com", password="password123",
@@ -91,7 +97,7 @@ class DashboardTests(APITestCase):
 
     def test_export_csv_content(self):
         """Vérifie la génération et le contenu du CSV."""
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.supervisor)
         url = reverse('export-csv')
         response = self.client.get(url)
         
@@ -112,7 +118,7 @@ class DashboardTests(APITestCase):
 
     def test_export_csv_filtering(self):
         """Vérifie le filtrage par date_debut et date_fin."""
-        self.client.force_authenticate(user=self.admin)
+        self.client.force_authenticate(user=self.supervisor)
         
         today = timezone.now().strftime('%Y-%m-%d')
         url = reverse('export-csv') + f"?date_debut={today}&date_fin={today}"

@@ -17,7 +17,7 @@ def test_guichet_flow():
     print("Démarrage du test du flux de paiement au guichet...")
     
     # Récupérer ou créer un agent
-    agent = User.objects.filter(role='reception_agent').first()
+    agent = User.objects.filter(role='agent').first()
     if not agent:
         agent = User.objects.filter(is_superuser=True).first()
     if not agent:

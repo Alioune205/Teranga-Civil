@@ -8,6 +8,7 @@ from .views import (
     PerformanceStatsView,
     ActivityStatsView,
     ExportDossiersCSVView,
+    WorkloadStatsView,
 )
 
 urlpatterns = [
@@ -41,5 +42,10 @@ urlpatterns = [
         'export/csv/',
         ExportDossiersCSVView.as_view(),
         name='export-csv'
+    ),
+    path(
+        'workload/',
+        WorkloadStatsView.as_view(),
+        name='workload-stats'
     ),
 ]

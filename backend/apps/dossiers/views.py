@@ -16,6 +16,10 @@ from apps.shared.permissions import (
     IsCitizen,
     IsAdminStaff,
     IsCivilAdmin,
+    IsSuperAdmin,
+    IsReceptionAgent,
+    IsVerificationAgent,
+    IsApprovalAgent,
 )
 from apps.shared.responses import success_response, error_response
 
@@ -69,7 +73,7 @@ class DossierViewSet(viewsets.ModelViewSet):
             return qs.filter(q)
         elif user.role == 'super_admin':
             return qs.all()
-        elif user.role in ['reception_agent', 'verification_agent', 'approval_agent', 'agent']:
+        elif user.role == 'agent':
             from django.db.models import Q
             q = Q(assigned_agent=user)
             if user.commune:
@@ -91,7 +95,7 @@ class DossierViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             return [IsAuthenticated(), IsCitizen()]
-        return [IsAuthenticated()]
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -227,7 +231,7 @@ class DossierViewSet(viewsets.ModelViewSet):
             400: OpenApiResponse(description='Acte non trouvé ou non correspondant.'),
         },
     )
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsCitizen], url_path='verify-registry')
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsCitizen | IsReceptionAgent | IsCivilAdmin | IsSuperAdmin], url_path='verify-registry')
     def verify_registry(self, request):
         """POST /api/dossiers/verify-registry/"""
         user = request.user
@@ -312,7 +316,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(tags=['Dossiers'], summary='Assigner un agent', request=DossierAssignSerializer)
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsAdminStaff])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsCivilAdmin | IsSuperAdmin])
     def assign(self, request, pk=None):
         """POST /api/dossiers/{id}/assign/ — Assign an agent."""
         dossier = self.get_object()
@@ -329,7 +333,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(tags=['Dossiers'], summary='Mettre en vérification')
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsAdminStaff])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsVerificationAgent | IsCivilAdmin | IsSuperAdmin])
     def review(self, request, pk=None):
         """POST /api/dossiers/{id}/review/ — Move to in_review."""
         dossier = self.get_object()
@@ -350,7 +354,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(tags=['Dossiers'], summary='Approuver un dossier')
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsCivilAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsApprovalAgent | IsCivilAdmin | IsSuperAdmin])
     def approve(self, request, pk=None):
         """POST /api/dossiers/{id}/approve/ — Approve the dossier and generate signed certificate."""
         dossier = self.get_object()
@@ -382,7 +386,7 @@ class DossierViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(tags=['Dossiers'], summary='Rejeter un dossier', request=DossierRejectSerializer)
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsCivilAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsApprovalAgent | IsVerificationAgent | IsCivilAdmin | IsSuperAdmin])
     def reject(self, request, pk=None):
         """POST /api/dossiers/{id}/reject/ — Reject with reason."""
         dossier = self.get_object()

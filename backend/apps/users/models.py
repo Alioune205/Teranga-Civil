@@ -19,10 +19,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Role(models.TextChoices):
         CITIZEN = 'citizen', 'Citoyen'
-        RECEPTION_AGENT = 'reception_agent', 'Agent de réception'
-        VERIFICATION_AGENT = 'verification_agent', 'Agent de vérification'
-        CIVIL_ADMIN = 'civil_admin', 'Administrateur d\'état civil'
+        AGENT = 'agent', 'Agent'
+        CIVIL_ADMIN = 'civil_admin', 'Administrateur de mairie'
+        CIVIL_ADMIN_SUPERVISOR = 'civil_admin_supervisor', 'Administrateur général de mairie'
         SUPER_ADMIN = 'super_admin', 'Super administrateur'
+
+    class AgentCapability(models.TextChoices):
+        RECEPTION = 'reception', 'Réception'
+        VERIFICATION = 'verification', 'Vérification'
+        APPROVAL = 'approval', 'Approbation'
 
     id = models.UUIDField(
         primary_key=True,
@@ -55,6 +60,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=Role.CITIZEN,
         verbose_name='Rôle',
         db_index=True,
+    )
+    agent_capabilities = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Capacités de l'agent",
+        help_text="Liste des étapes pour lesquelles cet agent est habilité (ex: ['reception', 'verification'])"
     )
     commune = models.ForeignKey(
         'communes.Commune',
@@ -118,12 +129,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_admin_staff(self):
         """Check if user has any administrative role."""
         return self.role in [
-            self.Role.RECEPTION_AGENT,
-            self.Role.VERIFICATION_AGENT,
+            self.Role.AGENT,
             self.Role.CIVIL_ADMIN,
+            self.Role.CIVIL_ADMIN_SUPERVISOR,
             self.Role.SUPER_ADMIN,
-            'agent',
-            'approval_agent'
         ]
 
 

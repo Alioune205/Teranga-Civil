@@ -24,22 +24,47 @@ class IsCitizen(IsRole):
     message = 'Accès réservé aux citoyens.'
 
 
-class IsReceptionAgent(IsRole):
-    """Only reception agents can access."""
-    allowed_roles = ['reception_agent']
+class IsAgentWithCapability(BasePermission):
+    """Base permission class that checks if an agent has a specific capability."""
+    required_capability = None
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        # Les super admins ou civil admins ont souvent les permissions implicitement selon la logique métier,
+        # mais stricto sensu, pour une action d'agent (ex: valider une étape), on vérifie le rôle agent.
+        if request.user.role == 'agent':
+            return self.required_capability in request.user.agent_capabilities
+        return False
+
+class IsReceptionAgent(IsAgentWithCapability):
+    """Only agents with reception capability can access."""
+    required_capability = 'reception'
     message = 'Accès réservé aux agents de réception.'
 
 
-class IsVerificationAgent(IsRole):
-    """Only verification agents can access."""
-    allowed_roles = ['verification_agent']
+class IsVerificationAgent(IsAgentWithCapability):
+    """Only agents with verification capability can access."""
+    required_capability = 'verification'
     message = 'Accès réservé aux agents de vérification.'
+
+
+class IsApprovalAgent(IsAgentWithCapability):
+    """Only agents with approval capability can access."""
+    required_capability = 'approval'
+    message = 'Accès réservé aux agents d\'approbation.'
 
 
 class IsCivilAdmin(IsRole):
     """Only civil administrators can access."""
     allowed_roles = ['civil_admin']
-    message = 'Accès réservé aux administrateurs d\'état civil.'
+    message = 'Accès réservé aux administrateurs de mairie (RH).'
+
+
+class IsCivilAdminSupervisor(IsRole):
+    """Only civil admin supervisors can access."""
+    allowed_roles = ['civil_admin_supervisor']
+    message = 'Accès réservé aux administrateurs généraux.'
 
 
 class IsSuperAdmin(IsRole):
@@ -50,13 +75,12 @@ class IsSuperAdmin(IsRole):
 
 class IsAdminStaff(IsRole):
     """
-    Any administrative staff (reception_agent, verification_agent,
-    civil_admin, super_admin) can access.
+    Any administrative staff (agent, civil_admin, civil_admin_supervisor, super_admin) can access.
     """
     allowed_roles = [
-        'reception_agent',
-        'verification_agent',
+        'agent',
         'civil_admin',
+        'civil_admin_supervisor',
         'super_admin',
     ]
     message = 'Accès réservé au personnel administratif.'
@@ -74,9 +98,9 @@ class IsAdminOrReadOnly(BasePermission):
             return True
 
         return request.user.role in [
-            'reception_agent',
-            'verification_agent',
+            'agent',
             'civil_admin',
+            'civil_admin_supervisor',
             'super_admin',
         ]
 
@@ -87,8 +111,8 @@ class IsOwnerOrAdmin(BasePermission):
     The object must have a `user` or `citizen` field pointing to the User.
     """
     def has_object_permission(self, request, view, obj):
-        # Check if user is admin staff
-        if request.user.role in ['civil_admin', 'super_admin']:
+        # Check if user is admin staff (supervisors included for object reads usually, but write check relies on the view)
+        if request.user.role in ['civil_admin', 'civil_admin_supervisor', 'super_admin']:
             return True
 
         # Check ownership via common FK names
