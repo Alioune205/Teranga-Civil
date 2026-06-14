@@ -155,10 +155,14 @@ class DashboardStatsView(APIView):
             'average_completion_time': format_duration(
                 timedelta(seconds=average_completion_time)
             ),
+            # Clés françaises (rétrocompat)
             'dossiers_par_type': dossiers_par_type,
             'dossiers_par_commune': dossiers_par_commune,
             'agents_les_plus_actifs': agents_les_plus_actifs,
             'taux_approbation': taux_approbation,
+            # Clés anglaises (contrat API mobile / tests)
+            'dossiers_by_type': dossiers_par_type,
+            'top_agents': agents_les_plus_actifs,
         }
 
         return success_response(data=data)

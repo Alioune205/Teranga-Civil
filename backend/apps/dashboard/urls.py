@@ -36,4 +36,10 @@ urlpatterns = [
         ExportDossiersCSVView.as_view(),
         name='dashboard-export'
     ),
+    # Alias pour compatibilité mobile / tests (reverse('export-csv'))
+    path(
+        'export/csv/',
+        ExportDossiersCSVView.as_view(),
+        name='export-csv'
+    ),
 ]
