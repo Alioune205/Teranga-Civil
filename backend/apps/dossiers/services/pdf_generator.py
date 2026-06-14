@@ -863,9 +863,15 @@ def _draw_pdf_content(p, width, height, dossier, officier, timbre_ref,
     ])
 
     # --- Infos Parents ---
+    # NB : l'enrichissement RegistreCivil renseigne `nom_pere`/`nom_mere`
+    # (noms complets) et `profession_pere`/`profession_mere`. Les anciennes
+    # clés `prenom_pere`/`prenom_mere` n'existent plus depuis la migration
+    # 0011, d'où le « N/A » précédent. On lit donc les bonnes clés.
     y = draw_section("Informations des Parents", y, [
-        ("Prénom Père", metadata.get('prenom_pere', 'N/A'), "", ""),
-        ("Prénoms Mère", metadata.get('prenom_mere', 'N/A'), "Nom Mère", metadata.get('nom_mere', 'N/A')),
+        ("Père", metadata.get('nom_pere', 'N/A'),
+         "Profession", metadata.get('profession_pere', 'N/A')),
+        ("Mère", metadata.get('nom_mere', 'N/A'),
+         "Profession", metadata.get('profession_mere', 'N/A')),
     ])
 
     # --- Jugement Supplétif ---
