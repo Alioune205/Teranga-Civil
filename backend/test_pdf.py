@@ -12,13 +12,11 @@ from apps.documents.models import GeneratedCertificate
 
 User = get_user_model()
 
-# 1. Obtenir une commune (Dakar Plateau par exemple)
 commune = Commune.objects.filter(code='DKR-PLT').first()
 if not commune:
     print("Commune DKR-PLT non trouvée.")
     exit()
 
-# 2. Obtenir ou créer un citoyen et un officier
 citizen, _ = User.objects.get_or_create(
     email='citizen@test.com',
     defaults={'first_name': 'Lansana', 'last_name': 'Coly', 'role': 'citizen', 'phone': '+221770000001'}
@@ -29,39 +27,48 @@ officier, _ = User.objects.get_or_create(
     defaults={'first_name': 'El Hadji Idrissa', 'last_name': 'Ndiaye', 'role': 'civil_admin', 'phone': '+221770000002'}
 )
 
-# 3. Créer un dossier fictif
 dossier, created = Dossier.objects.get_or_create(
-    reference='DOS-DEMO-PDF-1234',
+    reference='DOS-2026-3CD87',
     defaults={
         'citizen': citizen,
         'commune': commune,
         'type': 'birth_certificate',
         'status': 'in_review',
         'metadata': {
-            'numero_registre': '2020-0142',
-            'annee_registre': 2020,
-            'prenoms_enfant': 'Lansana',
-            'nom_enfant': 'Coly',
+            'numero_registre': '2026-3CD87',
+            'annee_registre': 2026,
+            'prenoms_enfant': 'Alioune',
+            'nom_enfant': 'Sène',
             'sexe': 'Masculin',
-            'date_naissance_personne': '2000-05-15',
-            'heure_naissance': '08:30',
-            'lieu_naissance': 'Dakar',
-            'prenom_pere': 'Ousmane',
+            'date_naissance_personne': '2000-01-01',
+            'heure_naissance': '14:30',
+            'lieu_naissance': 'Dakar Plateau',
+            'prenom_pere': 'Amadou',
             'prenom_mere': 'Fatou',
-            'nom_mere': 'Ndiaye',
-            'est_jugement_suppletif': True,
-            'tribunal_competent': 'Tribunal d\'Instance de Dakar',
-            'numero_jugement': 'JUG-2020-890',
-            'date_jugement': '2020-06-10',
-            'date_inscription': '2020-06-15',
-            'annee_inscription': 2020,
+            'nom_mere': 'Diop',
+            'est_jugement_suppletif': False,
         }
     }
 )
 
-# 4. Générer le certificat
+if not created:
+    dossier.type = 'birth_certificate'
+    dossier.metadata.update({
+            'numero_registre': '2026-3CD87',
+            'annee_registre': 2026,
+            'prenoms_enfant': 'Alioune',
+            'nom_enfant': 'Sène',
+            'sexe': 'Masculin',
+            'date_naissance_personne': '2000-01-01',
+            'heure_naissance': '14:30',
+            'lieu_naissance': 'Dakar Plateau',
+            'prenom_pere': 'Amadou',
+            'prenom_mere': 'Fatou',
+            'nom_mere': 'Diop',
+    })
+    dossier.save()
+
 try:
-    # On supprime s'il existait déjà pour pouvoir le regénérer
     GeneratedCertificate.objects.filter(dossier=dossier).delete()
     
     cert = generate_signed_certificate(dossier, officier)
@@ -71,4 +78,6 @@ try:
     print(f"🔒 Signature HMAC : {cert.hmac_signature}")
     print("==================================================")
 except Exception as e:
+    import traceback
+    traceback.print_exc()
     print(f"Erreur lors de la génération : {e}")

@@ -11,6 +11,9 @@ from apps.shared.responses import success_response
 
 from .models import AuditLog
 from .serializers import AuditLogSerializer
+from apps.shared.permissions import IsSuperAdmin, IsCivilAdminSupervisor
+from apps.dossiers.models import Dossier
+from apps.users.models import User
 
 
 import django_filters
@@ -45,11 +48,33 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = AuditLog.objects.select_related('user').all()
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsCivilAdminSupervisor]
     filterset_class = AuditLogFilter
     search_fields = ['user__email', 'resource_type', 'details']
     ordering_fields = ['created_at', 'action']
     ordering = ['-created_at']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        
+        if user.role == 'super_admin':
+            return qs
+            
+        if user.role == 'civil_admin_supervisor' and user.commune:
+            commune_id = user.commune_id
+            
+            # Sous-requêtes pour trouver les UUIDs correspondant à la commune
+            dossiers_ids = Dossier.objects.filter(commune_id=commune_id).values('id')
+            users_ids = User.objects.filter(commune_id=commune_id).values('id')
+            
+            return qs.filter(
+                Q(user__commune_id=commune_id) | 
+                Q(resource_type='dossier', resource_id__in=dossiers_ids) |
+                Q(resource_type='user', resource_id__in=users_ids)
+            )
+            
+        return qs.none()
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

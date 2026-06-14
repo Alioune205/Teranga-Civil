@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { attributionApi } from '../../services/attributionApi';
 import { ShieldExclamationIcon, PowerIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { jwtDecode } from 'jwt-decode';
+import { useAuth } from '@/hooks/useAuth';
 
 const CentreSupervision = ({ agents = [] }) => {
+    const { user } = useAuth();
     const [isSuperviseur, setIsSuperviseur] = useState(false);
+    const isReadOnly = user?.role === 'civil_admin_supervisor';
     
     // Bloc 1
     const [autoActive, setAutoActive] = useState(true);
@@ -118,6 +121,7 @@ const CentreSupervision = ({ agents = [] }) => {
             <div className="p-6 flex-grow flex flex-col space-y-6">
                 
                 {/* Bloc 1 : Moteur IA */}
+                {!isReadOnly && (
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-3">
                         <div>
@@ -147,8 +151,10 @@ const CentreSupervision = ({ agents = [] }) => {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Bloc 2 : Forcer Réattribution */}
+                {!isReadOnly && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <h4 className="font-semibold text-[#0F172A] text-sm mb-3 flex items-center">
                         <ArrowsRightLeftIcon className="w-4 h-4 mr-1 text-[#F59E0B]" />
@@ -179,6 +185,7 @@ const CentreSupervision = ({ agents = [] }) => {
                         </button>
                     </form>
                 </div>
+                )}
 
                 {/* Bloc 3 : Dernières Interventions */}
                 <div className="flex-grow">

@@ -11,7 +11,6 @@ import Login from '@/pages/Login.jsx';
 import Dashboard from '@/pages/Dashboard.jsx';
 import DashboardAttribution from '@/pages/DashboardAttribution.jsx';
 import CentreSupervision from '@/components/attribution/CentreSupervision.jsx';
-import JournalAudit from '@/components/attribution/JournalAudit.jsx';
 import Dossiers from '@/pages/Dossiers.jsx';
 import DossierDetail from '@/pages/DossierDetail.jsx';
 import CitoyenRepertoire from '@/pages/CitoyenRepertoire.jsx';
@@ -44,19 +43,29 @@ function App() {
               <Route path="/citoyens" element={<CitoyenRepertoire />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/dispatching" element={<DashboardAttribution />} />
-              <Route path="/supervision-ia" element={<DashboardAttribution />} />
 
-              {/* Réservé Admin Civil et Super Admin */}
-              <Route element={<RoleRoute allowedRoles={['civil_admin', 'super_admin']} />}>
+              {/* Réservé Admin Civil, Super Admin, et Superviseur */}
+              <Route element={<RoleRoute allowedRoles={['civil_admin', 'super_admin', 'civil_admin_supervisor']} />}>
                 <Route path="/agents" element={<Agents />} />
               </Route>
 
-              {/* Réservé Super Admin */}
+              <Route element={<RoleRoute allowedRoles={['super_admin', 'civil_admin_supervisor']} />}>
+                <Route path="/audit-logs" element={<AuditLogs />} />
+              </Route>
+
+              {/* Réservé Super Admin et Superviseur */}
+              <Route element={<RoleRoute allowedRoles={['super_admin', 'civil_admin_supervisor']} />}>
+                <Route path="/dispatching" element={<DashboardAttribution />} />
+                <Route path="/supervision-ia" element={<DashboardAttribution />} />
+              </Route>
+
+              {/* Réservé Super Admin et Superviseur pour certaines, Super Admin pur pour d'autres */}
               <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
                 <Route path="/communes" element={<Communes />} />
-                <Route path="/audit-logs" element={<JournalAudit />} />
                 <Route path="/ai-logs" element={<NdiogoyeLogs />} />
+              </Route>
+              
+              <Route element={<RoleRoute allowedRoles={['super_admin', 'civil_admin_supervisor']} />}>
                 <Route path="/admin/transactions" element={<Transactions />} />
               </Route>
             </Route>

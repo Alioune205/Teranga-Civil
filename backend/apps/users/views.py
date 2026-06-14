@@ -35,6 +35,12 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'first_name', 'last_name', 'email']
     ordering = ['-created_at']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role in ['civil_admin', 'civil_admin_supervisor']:
+            qs = qs.filter(commune=self.request.user.commune)
+        return qs
+
     def get_serializer_class(self):
         if self.action == 'list':
             return UserListSerializer
@@ -43,6 +49,12 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     def get_permissions(self):
+        if self.action == 'create':
+            # Bloquer la création pour le superviseur
+            from rest_framework.exceptions import PermissionDenied
+            if self.request.user.role == 'civil_admin_supervisor':
+                raise PermissionDenied("Action non autorisée pour le superviseur.")
+            return [IsAuthenticated(), IsAdminStaff()]
         if self.action == 'list':
             return [IsAuthenticated(), IsAdminStaff()]
         if self.action == 'retrieve':

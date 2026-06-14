@@ -98,18 +98,16 @@ export function RepartitionStatut({ loading, stats }) {
           />
         ) : (
           <div className="relative flex flex-col sm:flex-row items-center justify-center h-full gap-8 overflow-hidden">
-            <div className="relative w-[140px] h-[140px] max-h-[140px] flex-shrink-0">
-              <ResponsiveContainer width="100%" height="100%" aspect={1}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={70} paddingAngle={3} dataKey="value" stroke="none">
-                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                  </Pie>
-                  <RechartsTooltip content={<CustomPieTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="relative w-[130px] h-[130px] max-h-[130px] flex-shrink-0 overflow-hidden">
+              <PieChart width={130} height={130}>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={60} paddingAngle={3} dataKey="value" stroke="none">
+                  {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                </Pie>
+                <RechartsTooltip content={<CustomPieTooltip />} />
+              </PieChart>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-secondary dark:text-white">{stats?.total_dossiers ?? 0}</span>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mt-0.5">Demandes</span>
+                <span className="text-xl font-bold text-secondary dark:text-white">{stats?.total_dossiers ?? 0}</span>
+                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mt-0.5">Demandes</span>
               </div>
             </div>
             <div className="flex-1 max-w-[200px] overflow-y-auto pr-2">

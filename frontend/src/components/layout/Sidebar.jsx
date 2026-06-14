@@ -31,16 +31,16 @@ export function Sidebar({ open, setOpen, unreadCount }) {
     {
       title: 'GESTION',
       items: [
-        { name: 'Agents', href: '/agents', icon: Users, roles: ['civil_admin', 'super_admin'] },
+        { name: 'Agents', href: '/agents', icon: Users, roles: ['civil_admin', 'super_admin', 'civil_admin_supervisor'] },
         { name: 'Communes', href: '/communes', icon: Building2, roles: ['super_admin'] },
-        { name: 'Dispatching IA', href: '/dispatching', icon: GitBranch, roles: ['civil_admin', 'super_admin'] },
+        { name: 'Dispatching IA', href: '/dispatching', icon: GitBranch, roles: ['civil_admin', 'super_admin', 'civil_admin_supervisor'] },
       ],
     },
     {
       title: 'SYSTÈME',
       items: [
-        { name: "Journal d'audit", href: '/audit-logs', icon: ScrollText, roles: ['super_admin'] },
-        { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, roles: ['super_admin'] },
+        { name: "Journal d'audit", href: '/audit-logs', icon: ScrollText, roles: ['super_admin', 'civil_admin_supervisor'] },
+        { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, roles: ['super_admin', 'civil_admin_supervisor'] },
         { name: 'Notifications', href: '/notifications', icon: Bell },
         { name: 'Paramètres', href: '/settings', icon: Settings },
       ],

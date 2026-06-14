@@ -1,5 +1,6 @@
 // src/pages/Agents.jsx
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { getUserList, createUser } from '@/api/users';
 import { getCommuneList } from '@/api/communes';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ const EMPTY_FORM = {
 };
 
 export default function Agents() {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [communes, setCommunes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -162,10 +164,12 @@ export default function Agents() {
             Gestion des utilisateurs et agents
           </p>
         </div>
-        <Button onClick={() => { setForm(EMPTY_FORM); setErrors({}); setDialogOpen(true); }} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nouvel agent
-        </Button>
+        {user?.role !== 'civil_admin_supervisor' && (
+          <Button onClick={() => { setForm(EMPTY_FORM); setErrors({}); setDialogOpen(true); }} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nouvel agent
+          </Button>
+        )}
       </div>
 
       {/* Filtres */}

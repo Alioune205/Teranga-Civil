@@ -10,15 +10,22 @@ from apps.dossiers.models import Dossier
 from apps.users.models import User
 from apps.shared.pagination import StandardPagination
 
+from apps.shared.permissions import IsAdminStaff
+from rest_framework.exceptions import PermissionDenied
+
 class StatsAttributionView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def get(self, request):
-        total = Dossier.objects.count()
-        en_attente = Dossier.objects.filter(status='soumis').count()
-        en_traitement = Dossier.objects.filter(status='in_review').count()
-        termines = Dossier.objects.filter(status='termine').count()
-        rejetes = Dossier.objects.filter(status='rejete').count()
+        qs = Dossier.objects.all()
+        if request.user.role in ['civil_admin', 'civil_admin_supervisor']:
+            qs = qs.filter(commune=request.user.commune)
+            
+        total = qs.count()
+        en_attente = qs.filter(status='soumis').count()
+        en_traitement = qs.filter(status='in_review').count()
+        termines = qs.filter(status='termine').count()
+        rejetes = qs.filter(status='rejete').count()
 
         return Response({
             'total': total,
@@ -29,17 +36,21 @@ class StatsAttributionView(APIView):
         })
 
 class AgentsChargeView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def get(self, request):
-        agents = ProfilAgent.objects.filter(user__is_active=True).select_related('user')
+        agents_qs = ProfilAgent.objects.filter(user__is_active=True).select_related('user')
+        if request.user.role in ['civil_admin', 'civil_admin_supervisor']:
+            agents_qs = agents_qs.filter(user__commune=request.user.commune)
+            
+        agents = agents_qs
         data = []
         for agent in agents:
             en_cours = AttributionDossier.objects.filter(agent_actuel=agent.user, dossier__status='in_review').count()
             data.append({
                 'id': agent.user.id,
                 'email': agent.user.email,
-                'nom': agent.user.get_full_name(),
+                'nom': agent.user.full_name,
                 'score_global': agent.score_global,
                 'charge_maximale': agent.charge_maximale,
                 'dossiers_en_cours': en_cours,
@@ -48,11 +59,13 @@ class AgentsChargeView(APIView):
         return Response(data)
 
 class CarteAttributionView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
     pagination_class = StandardPagination
 
     def get(self, request):
         queryset = AttributionDossier.objects.filter(dossier__status='in_review').select_related('dossier', 'agent_actuel').order_by('-date_attribution')
+        if request.user.role in ['civil_admin', 'civil_admin_supervisor']:
+            queryset = queryset.filter(dossier__commune=request.user.commune)
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         
@@ -71,11 +84,15 @@ class CarteAttributionView(APIView):
         return paginator.get_paginated_response(data)
 
 class JournalAttributionView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
     pagination_class = StandardPagination
 
     def get(self, request):
         queryset = JournalAttribution.objects.all().order_by('-timestamp')
+        if request.user.role in ['civil_admin', 'civil_admin_supervisor']:
+            dossiers_ids = list(Dossier.objects.filter(commune=request.user.commune).values_list('id', flat=True))
+            dossiers_ids_str = [str(d_id) for d_id in dossiers_ids]
+            queryset = queryset.filter(dossier_id__in=dossiers_ids_str)
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         
@@ -94,9 +111,11 @@ class JournalAttributionView(APIView):
         return paginator.get_paginated_response(data)
 
 class ReattribuerDossierView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def post(self, request, dossier_id):
+        if request.user.role == 'civil_admin_supervisor':
+            raise PermissionDenied("Action non autorisée pour le superviseur.")
         dossier = get_object_or_404(Dossier, id=dossier_id)
         nouvel_agent_id = request.data.get('agent_id')
         raison = request.data.get('raison')
@@ -119,9 +138,11 @@ class ReattribuerDossierView(APIView):
         return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
 
 class SuspendreAttributionView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def post(self, request):
+        if request.user.role == 'civil_admin_supervisor':
+            raise PermissionDenied("Action non autorisée pour le superviseur.")
         commune_id = request.data.get('commune_id')
         duree = int(request.data.get('duree_heures', 24))
         if not commune_id:
@@ -132,7 +153,7 @@ class SuspendreAttributionView(APIView):
         return Response({"message": msg})
 
 class AgentPerformanceView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def get(self, request, agent_id):
         agent = get_object_or_404(ProfilAgent, user__id=agent_id)
@@ -144,7 +165,7 @@ class AgentPerformanceView(APIView):
         })
 
 class RecommandationAgentView(APIView):
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminStaff]
 
     def get(self, request, dossier_id):
         dossier = get_object_or_404(Dossier, id=dossier_id)

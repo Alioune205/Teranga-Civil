@@ -67,16 +67,10 @@ export function ActiviteMensuelle({ loading, activity }) {
         ) : monthlyData.length === 0 ? (
           <EmptyState
             variant="no-data"
-            title="Aucune activité ce mois"
+            title="Aucune donnée disponible pour cette période"
             description="Créez votre première demande pour générer des statistiques détaillées."
             actionLabel="Nouvelle demande"
             onAction={() => navigate('/dossiers')}
-          />
-        ) : monthlyData.length < 2 ? (
-          <EmptyState
-            variant="insufficient"
-            title="Données insuffisantes"
-            description={`Données disponibles à partir du mois prochain.`}
           />
         ) : (
           <ResponsiveContainer width="100%" height="100%">

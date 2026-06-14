@@ -80,16 +80,21 @@ class InitiatePaymentView(APIView):
             data={"status": "success", "transaction_id": str(tx.reference)}
         )
 
+from apps.shared.permissions import IsSuperAdmin, IsCivilAdminSupervisor
+
 class AdminTransactionListView(ListAPIView):
     """
     GET /api/v1/admin/transactions
-    Permet au super administrateur de lister les transactions de paiement avec filtres et pagination.
+    Permet au super administrateur ou superviseur de lister les transactions de paiement.
     """
     serializer_class = PaymentTransactionSerializer
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsCivilAdminSupervisor]
 
     def get_queryset(self):
         queryset = PaymentTransaction.objects.all().select_related('dossier', 'agent').prefetch_related('treasury_transfers')
+        
+        if self.request.user.role == 'civil_admin_supervisor' and self.request.user.commune:
+            queryset = queryset.filter(dossier__commune=self.request.user.commune)
 
         # Filtre par type de paiement
         payment_type = self.request.query_params.get('payment_type')
@@ -128,9 +133,9 @@ from .models import PaymentStatus
 class AdminTransactionStatsView(APIView):
     """
     GET /api/v1/admin/transactions/stats
-    Retourne les indicateurs de performance clés (KPI) pour le tableau de bord des paiements.
+    Permet de récupérer les statistiques globales des transactions.
     """
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsCivilAdminSupervisor]
 
     @extend_schema(
         tags=['Paiements'],
@@ -140,21 +145,25 @@ class AdminTransactionStatsView(APIView):
     def get(self, request, *args, **kwargs):
         now = timezone.now()
         today = now.date()
+        
+        qs = PaymentTransaction.objects.all()
+        if request.user.role == 'civil_admin_supervisor' and request.user.commune:
+            qs = qs.filter(dossier__commune=request.user.commune)
 
         # Nombre total de transactions créées aujourd'hui
-        total_today = PaymentTransaction.objects.filter(created_at__date=today).count()
+        total_today = qs.filter(created_at__date=today).count()
 
         # Montant total cumulé de toutes les transactions réussies
-        total_amount = PaymentTransaction.objects.filter(status=PaymentStatus.SUCCESS).aggregate(total=Sum('amount'))['total'] or 0.0
+        total_amount = qs.filter(status=PaymentStatus.SUCCESS).aggregate(total=Sum('amount'))['total'] or 0.0
 
         # Taux de succès global
-        total_count = PaymentTransaction.objects.count()
-        success_count = PaymentTransaction.objects.filter(status=PaymentStatus.SUCCESS).count()
+        total_count = qs.count()
+        success_count = qs.filter(status=PaymentStatus.SUCCESS).count()
         success_rate = (success_count / total_count * 100) if total_count > 0 else 0.0
 
         # Répartition par type de paiement
         distribution = list(
-            PaymentTransaction.objects.values('payment_type')
+            qs.values('payment_type')
             .annotate(count=Count('id'))
             .order_by('-count')
         )

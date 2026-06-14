@@ -44,8 +44,8 @@ const PAYMENT_TYPE_LABELS = {
 export default function Transactions() {
   const { role } = useAuth();
 
-  // Restriction super_admin uniquement
-  if (role !== 'super_admin') {
+  // Restriction super_admin et civil_admin_supervisor uniquement
+  if (role !== 'super_admin' && role !== 'civil_admin_supervisor') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -282,13 +282,15 @@ export default function Transactions() {
             <Clock className="h-4 w-4 text-slate-400" />
             Actualiser
           </Button>
-          <Button 
-            onClick={handleExportCSV}
-            className="gap-2 bg-[#1D4ED8] hover:bg-[#1D4ED8]/90 text-white rounded-lg focus:ring-[#1D4ED8]"
-          >
-            <Download className="h-4 w-4" />
-            Exporter CSV
-          </Button>
+          {role === 'super_admin' && (
+            <Button 
+              onClick={handleExportCSV}
+              className="gap-2 bg-[#1D4ED8] hover:bg-[#1D4ED8]/90 text-white rounded-lg focus:ring-[#1D4ED8]"
+            >
+              <Download className="h-4 w-4" />
+              Exporter CSV
+            </Button>
+          )}
         </div>
       </div>
 
