@@ -16,16 +16,17 @@ from apps.dossiers.services.pdf_generator import (
     _draw_residence_pdf_content,
     _draw_deces_pdf_content,
     _draw_mariage_pdf_content,
+    get_seal_assets,
 )
 
 class CommuneMock:
-    name = "Keur Massar"
+    name = "Dakar Plateau"
     region = "Dakar"
-    department = "Keur Massar"
-    nom_officier_etat_civil = "Khadija FAYE"
+    department = "Dakar"
+    nom_officier_etat_civil = "Officier Dakar Plateau"
 
 class OfficierMock:
-    full_name = "Khadija FAYE"
+    full_name = "Officier Dakar Plateau"
 
 def get_base_dossier(ref, doc_type):
     class DossierMock:
@@ -47,25 +48,17 @@ def get_base_dossier(ref, doc_type):
     return DossierMock()
 
 def make_qr_reader(ref):
-    qr = qrcode.QRCode(version=1, box_size=10, border=1)
-    qr.add_data(f"https://teranga-civil.sn/verify/{ref}")
-    qr.make(fit=True)
-    img_qr = qr.make_image(fill_color="black", back_color="white")
-    qr_buffer = BytesIO()
-    img_qr.save(qr_buffer, format="PNG")
-    qr_buffer.seek(0)
-    return ImageReader(qr_buffer)
+    return ImageReader("https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=VERIFY:" + ref)
 
-cachet_path = r"C:\Users\senep\Desktop\Hackathon\Cachet Etat civil keur Massar.jpg"
-cachet_nominal_path = r"C:\Users\senep\Desktop\Hackathon\Cachet nominale Keur Massar.jpg"
-signature_path = r"C:\Users\senep\Desktop\Hackathon\signature keur massar.jpg"
-
-if not os.path.exists(cachet_path): cachet_path = ''
-if not os.path.exists(cachet_nominal_path): cachet_nominal_path = ''
-if not os.path.exists(signature_path): signature_path = ''
+class NdiaganiaoCommuneMock:
+    name = "Ndiaganiao"
+    region = "Thiès"
+    department = "Mbour"
+    nom_officier_etat_civil = "Officier Ndiaganiao"
 
 def gen_mariage():
     dossier = get_base_dossier("MAR-2026-0089", "marriage_certificate")
+    dossier.commune = NdiaganiaoCommuneMock()
     dossier.metadata = {
         'registre_marriage': '142',
         'annee_marriage': 'deux mille vingt-six',
@@ -100,9 +93,10 @@ def gen_mariage():
     }
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
+    c_path, s_path, n_path = get_seal_assets(dossier.commune.name)
     _draw_mariage_pdf_content(
         p, A4[0], A4[1], dossier, OfficierMock(), "TF-MAR-99X2",
-        cachet_path, signature_path, cachet_nominal_path, make_qr_reader(dossier.reference)
+        c_path, s_path, n_path, make_qr_reader(dossier.reference)
     )
     p.showPage()
     p.save()
@@ -130,9 +124,10 @@ def gen_deces():
     buffer = BytesIO()
     pagesize = landscape(A4)
     p = canvas.Canvas(buffer, pagesize=pagesize)
+    c_path, s_path, n_path = get_seal_assets(dossier.commune.name)
     _draw_deces_pdf_content(
         p, pagesize[0], pagesize[1], dossier, OfficierMock(), "TF-DEC-88Y1",
-        cachet_path, signature_path, cachet_nominal_path, make_qr_reader(dossier.reference)
+        c_path, s_path, n_path, make_qr_reader(dossier.reference)
     )
     p.showPage()
     p.save()
@@ -140,7 +135,7 @@ def gen_deces():
         f.write(buffer.getvalue())
 
 def gen_residence():
-    dossier = get_base_dossier("RES-2026-0089", "residence_certificate")
+    dossier = get_base_dossier("DOS-2026-A2BE5", "residence_certificate")
     dossier.metadata = {
         'nom_demandeur': 'Mamadou Diop',
         'date_naissance_demandeur': '12 Mai 1985',
@@ -154,35 +149,37 @@ def gen_residence():
     buffer = BytesIO()
     pagesize = landscape(A4)
     p = canvas.Canvas(buffer, pagesize=pagesize)
+    c_path, s_path, n_path = get_seal_assets(dossier.commune.name)
     _draw_residence_pdf_content(
         p, pagesize[0], pagesize[1], dossier, OfficierMock(), "TF-RES-5421",
-        cachet_path, signature_path, cachet_nominal_path, make_qr_reader(dossier.reference)
+        c_path, s_path, n_path, make_qr_reader(dossier.reference)
     )
     p.showPage()
     p.save()
-    with open('certificat_residence_test_final.pdf', 'wb') as f:
+    with open('Certificat_DOS-2026-A2BE5.pdf', 'wb') as f:
         f.write(buffer.getvalue())
 
 def gen_naissance():
-    dossier = get_base_dossier("NAI-2026-1020", "birth_certificate")
+    dossier = get_base_dossier("NAI-2026-DOB02", "birth_certificate")
     dossier.metadata = {
-        'prenoms_enfant': 'Saliou',
-        'nom_enfant': 'DIOP',
-        'date_naissance_personne': '20 Février 2026',
-        'heure_naissance': '08h15',
-        'lieu_naissance': 'Hôpital de Pikine',
+        'prenoms_enfant': 'Oumar',
+        'nom_enfant': 'BA',
+        'date_naissance_personne': '02 Janvier 2026',
+        'heure_naissance': '14h45',
+        'lieu_naissance': 'Hôpital Principal de Dakar',
         'sexe': 'Masculin',
-        'nom_pere': 'Ousmane DIOP',
-        'prenom_mere': 'Aïssatou',
+        'nom_pere': 'Amadou',
+        'prenom_mere': 'Mariama',
         'nom_mere': 'SOW',
         'annee_registre': '2026',
-        'numero_registre': '1020'
+        'numero_registre': '43498'
     }
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
+    c_path, s_path, n_path = get_seal_assets(dossier.commune.name)
     _draw_birth_certificate_content(
         p, A4[0], A4[1], dossier, OfficierMock(), "TF-NAI-991A",
-        cachet_path, signature_path, cachet_nominal_path, make_qr_reader(dossier.reference)
+        c_path, s_path, n_path, make_qr_reader(dossier.reference)
     )
     p.showPage()
     p.save()

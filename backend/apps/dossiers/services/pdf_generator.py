@@ -107,20 +107,50 @@ def _try_draw_image(c, img_path, x, y, width, height):
     return False
 
 
-def _draw_seal(c, path, x, y, size):
-    """Dessine un cachet (SVG ou PNG) à la position donnée."""
-    if path and path.endswith('.svg'):
-        if not _try_draw_svg(c, path, x, y, size, size):
-            _draw_placeholder_seal(c, x, y, size, "CACHET")
-    elif path:
-        if not _try_draw_image(c, path, x, y, size, size):
-            _draw_placeholder_seal(c, x, y, size, "CACHET")
+def _draw_dynamic_seal(c, x, y, size, commune_name, seal_type="communal", officier_name=""):
+    from reportlab.lib.colors import HexColor
+    cx = x + size / 2
+    cy = y + size / 2
+    radius = size / 2 - 2
+    c.saveState()
+    c.setStrokeColor(HexColor('#0044CC'))
+    c.setLineWidth(1)
+    c.circle(cx, cy, radius, stroke=1, fill=0)
+    c.circle(cx, cy, radius - 3, stroke=1, fill=0)
+    
+    c.setFillColor(HexColor('#0044CC'))
+    if seal_type == "communal":
+        c.setFont("Helvetica-Bold", 5)
+        c.drawCentredString(cx, cy + 6, "RÉPUBLIQUE DU SÉNÉGAL")
+        c.drawCentredString(cx, cy, "ÉTAT CIVIL")
+        c.setFont("Helvetica", 5)
+        c.drawCentredString(cx, cy - 6, f"COMMUNE DE {commune_name.upper()[:20]}")
     else:
-        _draw_placeholder_seal(c, x, y, size, "CACHET")
+        c.setFont("Helvetica-Bold", 5)
+        c.drawCentredString(cx, cy + 6, "L'Officier de l'État Civil")
+        c.setFont("Helvetica", 5)
+        c.drawCentredString(cx, cy, f"COMMUNE DE {commune_name.upper()[:20]}")
+        c.setFont("Helvetica-Bold", 5)
+        c.drawCentredString(cx, cy - 6, officier_name[:25])
+    c.restoreState()
+
+
+def _draw_seal(c, path, x, y, size, commune_name="", seal_type="communal", officier_name=""):
+    """Dessine un cachet (SVG ou PNG) à la position donnée ou un cachet dynamique."""
+    import os
+    if path and path != 'DYNAMIC' and path.endswith('.svg') and os.path.exists(path):
+        if not _try_draw_svg(c, path, x, y, size, size):
+            _draw_dynamic_seal(c, x, y, size, commune_name, seal_type, officier_name)
+    elif path and path != 'DYNAMIC' and os.path.exists(path):
+        if not _try_draw_image(c, path, x, y, size, size):
+            _draw_dynamic_seal(c, x, y, size, commune_name, seal_type, officier_name)
+    else:
+        _draw_dynamic_seal(c, x, y, size, commune_name, seal_type, officier_name)
 
 
 def _draw_placeholder_seal(c, x, y, size, label):
     """Dessine un cercle pointillé comme placeholder de cachet."""
+    from reportlab.lib.colors import HexColor
     cx = x + size / 2
     cy = y + size / 2
     c.saveState()
@@ -133,7 +163,7 @@ def _draw_placeholder_seal(c, x, y, size, label):
     c.restoreState()
 
 
-def _draw_signatures_and_seals(p, x_start, y_start, cachet_path, signature_path, cachet_nominal_path, seal_size=3.2 * cm):
+def _draw_signatures_and_seals(p, x_start, y_start, cachet_path, signature_path, cachet_nominal_path, seal_size=3.2 * cm, commune_name="COMMUNE", officier_name="OFFICIER"):
     """
     Fonction réutilisable pour dessiner les 3 éléments de validation
     (Cachet communal, Signature de l'officier, Cachet nominal)
@@ -142,17 +172,23 @@ def _draw_signatures_and_seals(p, x_start, y_start, cachet_path, signature_path,
     import os
     from reportlab.lib.utils import ImageReader
     from reportlab.lib.units import cm
+    from reportlab.lib.colors import HexColor
     
     # Cachet communal (gauche)
-    _draw_seal(p, cachet_path, x_start + 0.2 * cm, y_start + 0.2 * cm, seal_size)
+    _draw_seal(p, cachet_path, x_start + 0.2 * cm, y_start + 0.2 * cm, seal_size, commune_name=commune_name, seal_type="communal")
     
     # Signature manuscrite (centre) - taille réduite et centrée
-    if signature_path and os.path.exists(signature_path):
+    if signature_path and signature_path != 'DYNAMIC' and os.path.exists(signature_path):
         p.drawImage(ImageReader(signature_path), x_start + 3.8 * cm, y_start + 0.8 * cm, width=2.4 * cm, height=1.2 * cm, mask='auto')
+    else:
+        p.saveState()
+        p.setFillColor(HexColor('#0000FF'))
+        p.setFont("Helvetica-Oblique", 10)
+        p.drawCentredString(x_start + 5.0 * cm, y_start + 1.2 * cm, officier_name)
+        p.restoreState()
         
     # Cachet nominal (droite)
-    if cachet_nominal_path:
-        _draw_seal(p, cachet_nominal_path, x_start + 6.6 * cm, y_start + 0.3 * cm, seal_size)
+    _draw_seal(p, cachet_nominal_path, x_start + 6.6 * cm, y_start + 0.3 * cm, seal_size, commune_name=commune_name, seal_type="nominal", officier_name=officier_name)
 
 
 def _generate_raw_pdf(dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path):
@@ -377,46 +413,136 @@ def _draw_official_footer(p, width, height, dossier, officier, timbre_ref, cache
     from datetime import datetime
     date_str = dossier.updated_at.strftime('%d/%m/%Y') if dossier.updated_at else datetime.now().strftime('%d/%m/%Y')
     p.drawCentredString(sig_zone_x + 4.5 * cm, footer_y - 0.6 * cm, f"Fait à {commune_name}, le {date_str}")
-    p.setFont("Helvetica-Bold", 9)
+    
     officier_name = officier.full_name if officier else "L'Officier de l'État Civil"
-    p.drawCentredString(sig_zone_x + 4.5 * cm, footer_y - 1.1 * cm, officier_name)
 
     seal_size = 3.2 * cm
     seal_y = footer_y - 4.5 * cm
-    _draw_signatures_and_seals(p, sig_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
+    commune_name = dossier.commune.name if dossier.commune else "COMMUNE"
+    officier_name = officier.full_name if officier else "L'Officier"
+    _draw_signatures_and_seals(p, sig_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size, commune_name, officier_name)
 
     p.setFillColor(COLOR_GRIS)
     p.setFont("Helvetica-Oblique", 7)
     p.drawCentredString(width / 2, 0.8 * cm, "Document généré électroniquement - SUNU CIVIL / Teranga Civil. Ce document est sécurisé par une empreinte cryptographique (HMAC-SHA256).")
 
 def _draw_residence_pdf_content(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader):
-    _draw_watermark(p, width, height)
-    y = _draw_official_header(p, width, height, dossier.commune, "CERTIFICAT DE RÉSIDENCE", dossier.reference)
-
     metadata = dossier.metadata or {}
     citizen = dossier.citizen
-    prenoms = metadata.get('prenoms_requerant') or (citizen.first_name if citizen else "")
-    nom = metadata.get('nom_requerant') or (citizen.last_name if citizen else "")
+    prenoms = metadata.get('prenoms_requerant') or metadata.get('nom_demandeur', '').split(' ')[0] or (citizen.first_name if citizen else "")
+    nom = metadata.get('nom_requerant') or " ".join(metadata.get('nom_demandeur', '').split(' ')[1:]) or (citizen.last_name if citizen else "")
     nom_complet = f"{prenoms} {nom}".strip()
-    date_naissance = metadata.get('date_naissance') or (str(citizen.profile.date_of_birth) if citizen and hasattr(citizen, 'profile') else "")
-    lieu_naissance = metadata.get('lieu_naissance') or (citizen.profile.place_of_birth if citizen and hasattr(citizen, 'profile') else "")
-    adresse = metadata.get('adresse') or (citizen.profile.address if citizen and hasattr(citizen, 'profile') else "")
-    quartier = metadata.get('quartier', '')
-    date_installation = metadata.get('date_installation', '')
+    date_naissance = metadata.get('date_naissance') or metadata.get('date_naissance_demandeur') or (str(citizen.profile.date_of_birth) if citizen and hasattr(citizen, 'profile') else "")
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(date_naissance, '%Y-%m-%d')
+        mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+        date_naissance_str = f"{dt.day:02d} {mois_fr[dt.month-1]} {dt.year}"
+    except Exception:
+        date_naissance_str = date_naissance
+
+    lieu_naissance = metadata.get('lieu_naissance') or metadata.get('lieu_naissance_demandeur') or (citizen.profile.place_of_birth if citizen and hasattr(citizen, 'profile') else "")
+    if not lieu_naissance or lieu_naissance == 'N/A':
+        lieu_naissance = "lieu non précisé"
+
+    adresse = metadata.get('adresse') or metadata.get('adresse_demandeur') or (citizen.profile.address if citizen and hasattr(citizen, 'profile') else "")
+    quartier = metadata.get('quartier') or metadata.get('quartier_demandeur') or ''
+    date_installation = metadata.get('date_installation') or metadata.get('annee_residence') or ''
 
     commune_name = dossier.commune.name if dossier.commune else "INCONNUE"
-    quartier_text = f" au quartier {quartier}" if quartier and quartier.strip() else ""
-    texte_complet = (f"Nous soussigné(e) Maire de la Commune de {commune_name.capitalize()} certifions "
-                     f"que {nom_complet} né(e) le {date_naissance} à {lieu_naissance} et qu'il (elle) "
-                     f"réside à {adresse}{quartier_text} depuis {date_installation}.")
+    region_name = dossier.commune.region if dossier.commune and hasattr(dossier.commune, 'region') else "INCONNUE"
+
+    # --- EN-TETE ---
+    # Haut gauche
+    p.setFont("Helvetica-Bold", 10)
+    p.drawCentredString(4.5 * cm, height - 1.5 * cm, "Un Peuple - Un But - Une Foi")
+    p.drawCentredString(4.5 * cm, height - 2.0 * cm, f"REGION DE {region_name.upper()}")
+    p.drawCentredString(4.5 * cm, height - 2.5 * cm, f"COMMUNE DE {commune_name.upper()}")
+
+    # Haut droite (Titre)
+    p.setFillColor(HexColor("#0B2240"))
+    p.setFont("Helvetica-Bold", 24)
+    title = "CERTIFICAT DE RESIDENCE"
+    title_x = width / 2 + 3.0 * cm
+    p.drawCentredString(title_x, height - 2.2 * cm, title)
+    
+    title_width = p.stringWidth(title, "Helvetica-Bold", 24)
+    p.setLineWidth(1)
+    p.line(title_x - title_width/2, height - 2.5 * cm, title_x + title_width/2, height - 2.5 * cm)
+    
+    p.setFillColor(COLOR_NOIR)
+    p.setFont("Helvetica", 12)
+    p.drawCentredString(title_x, height - 4.0 * cm, f"N° Pièce portée : {dossier.reference}")
+
+    # --- CORPS ---
+    if quartier and quartier.lower() in adresse.lower():
+        quartier_text = ""
+    else:
+        quartier_text = f" au quartier {quartier}" if quartier and quartier.strip() else ""
+        
+    duree_str = str(date_installation).strip()
+    duree_lower = duree_str.lower()
+    if "il y a" in duree_lower:
+        val = duree_lower.replace("il y a", "").strip()
+        if not val.endswith("ans"): val += " ans"
+        depuis_text = f"depuis {val}"
+    elif duree_lower.isdigit() and len(duree_lower) <= 2:
+        depuis_text = f"depuis {duree_lower} ans"
+    elif duree_lower.endswith("ans"):
+        depuis_text = f"depuis {duree_lower}"
+    else:
+        depuis_text = f"depuis {duree_lower}" if duree_lower else ""
+
+    from utils.pdf_helpers import accord
+    genre = metadata.get('genre') or metadata.get('sexe') or ''
+    ne_nee = accord(genre, 'né', 'née', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+    il_elle = accord(genre, 'il', 'elle', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+    soussigne_e = accord(genre, 'soussigné', 'soussignée', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+
+    texte_complet = (f"Nous {soussigne_e} Maire de la Commune de {commune_name.capitalize()} certifions "
+                     f"que {nom_complet} {ne_nee} le {date_naissance_str} à {lieu_naissance} et qu'{il_elle} "
+                     f"réside à {adresse}{quartier_text} {depuis_text}.")
 
     p.setFillColor(COLOR_NOIR)
-    p.setFont("Helvetica", 14)
-    para = Paragraph(texte_complet, ParagraphStyle(name='Center', fontName='Helvetica', fontSize=14, leading=22, alignment=TA_CENTER))
+    style = ParagraphStyle(name='Center', fontName='Helvetica', fontSize=18, leading=28, alignment=TA_CENTER)
+    para = Paragraph(texte_complet, style)
     para.wrap(width - 4 * cm, 10 * cm)
-    para.drawOn(p, 3 * cm, y - para.height - 0.5 * cm)
+    para.drawOn(p, 2 * cm, height / 2 - 1.0 * cm)
 
-    _draw_official_footer(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
+    # --- PIED DE PAGE ---
+    footer_y = 5.0 * cm
+
+    # Gauche : Validité, QR, Timbre
+    p.setFillColor(HexColor("#D32F2F"))
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(2.0 * cm, footer_y, "Validité : 3 mois à compter de la date de délivrance")
+    
+    p.setFillColor(COLOR_NOIR)
+    qr_x = 2.0 * cm
+    qr_y = footer_y - 3.5 * cm
+    qr_size = 2.5 * cm
+    if qr_image_reader:
+        p.drawImage(qr_image_reader, qr_x, qr_y, width=qr_size, height=qr_size)
+        p.setFont("Helvetica", 6.5)
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.3 * cm, "Scannez pour vérifier")
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.55 * cm, "l'authenticité")
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.8 * cm, f"Réf : {dossier.reference}")
+
+    if timbre_ref:
+        _draw_secure_timbre(p, qr_x + qr_size + 0.5 * cm, qr_y + 0.5 * cm, timbre_ref)
+
+    # Droite : Lieu, date, signatures
+    sig_x = width - 8.0 * cm
+    from datetime import datetime
+    date_str = dossier.updated_at.strftime('%d/%m/%Y') if dossier.updated_at else datetime.now().strftime('%d/%m/%Y')
+    
+    p.setFont("Helvetica", 10)
+    p.drawCentredString(sig_x, footer_y - 0.5 * cm, f"Fait à {commune_name.capitalize()}, le {date_str}")
+    p.drawCentredString(sig_x, footer_y - 1.2 * cm, "Officier de l'État Civil")
+    
+    seal_size = 3.5 * cm
+    seal_y = footer_y - 5.0 * cm
+    _draw_signatures_and_seals(p, width - 13.5 * cm, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size, commune_name, "")
 
 def number_to_french_words(n):
     if n == 0:
@@ -614,37 +740,11 @@ def generate_marriage_certificate_v2(p, width, height, dossier, officier, timbre
     region = clean_val(getattr(commune, 'region', None) if commune else None).upper()
     p.drawString(2.0 * cm, height - 2.0 * cm, f"RÉGION DE {region}")
     
-    ville_name = metadata.get('ville') or metadata.get('ville_enregistrement')
-    if not ville_name and commune:
-        dep = getattr(commune, 'department', '')
-        dep = dep.upper() if dep else ""
-        reg = getattr(commune, 'region', '')
-        reg = reg.upper() if reg else ""
-        if "DAKAR" in dep or "DAKAR" in reg or dep in ["THIÈS", "THIES", "RUFISQUE", "PIKINE", "GUÉDIAWAYE", "GUEDIAWAYE"]:
-            ville_name = dep if dep else reg
+    departement = clean_val(getattr(commune, 'department', None) if commune else None).upper()
+    p.drawString(2.0 * cm, height - 2.5 * cm, f"DÉPARTEMENT DE {departement}")
     
-    y_header = height - 2.5 * cm
-    if ville_name:
-        p.drawString(2.0 * cm, y_header, f"VILLE DE {ville_name.upper()}")
-        y_header -= 0.5 * cm
-        
     commune_name = clean_val(getattr(commune, 'name', None) if commune else None).upper()
-    if ville_name:
-        p.drawString(2.0 * cm, y_header, f"COMMUNE D'ARRONDISSEMENT DE {commune_name}")
-    else:
-        p.drawString(2.0 * cm, y_header, f"COMMUNE DE {commune_name}")
-    y_header -= 0.5 * cm
-    
-    centre_val = metadata.get('centre_nom') or metadata.get('centre')
-    if centre_val:
-        centre_val_upper = centre_val.upper()
-        if "SECONDAIRE" in centre_val_upper:
-            centre_line = centre_val_upper
-        else:
-            is_secondaire = "FANN" in centre_val_upper or "GRAND DAKAR" in centre_val_upper
-            centre_type = "CENTRE SECONDAIRE" if is_secondaire else "CENTRE PRINCIPAL"
-            centre_line = f"{centre_type} DE {centre_val_upper}"
-        p.drawString(2.0 * cm, y_header, centre_line)
+    p.drawString(2.0 * cm, height - 3.0 * cm, f"COMMUNE DE {commune_name}")
         
     # Colonne Droite
     p.setFont("Helvetica-Bold", 10)
@@ -676,6 +776,7 @@ def generate_marriage_certificate_v2(p, width, height, dossier, officier, timbre
     # ── 4. PARAGRAPHE D'OUVERTURE ──
     y_body = y_reg - 2.0 * cm
     officier_name = clean_val(metadata.get('officier_nom') or metadata.get('officier') or (officier.full_name if officier else None) or (getattr(commune, 'nom_officier_etat_civil', None) if commune else None), default="L'Officier d'État Civil")
+    centre_val = metadata.get('centre_nom') or metadata.get('centre')
     centre_etat_civil = centre_val if centre_val else (getattr(commune, 'name', "Centre d'État Civil") if commune else "Centre d'État Civil")
     
     if centre_val:
@@ -967,13 +1068,20 @@ def _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
     lien_declarant  = metadata.get('lien_declarant', '')
     cni_declarant   = metadata.get('cni_declarant', '')
 
+    from utils.pdf_helpers import accord
+    genre = sexe
+    soussigne_e = accord(genre, 'soussigné', 'soussignée', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+    ne_nee = accord(genre, 'né', 'née', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+    domicilie_e = accord(genre, 'domicilié', 'domiciliée', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+    decede_e = accord(genre, 'décédé', 'décédée', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+
     # ── Texte narratif central ─────────────────────────────────────
-    texte = (f"Nous soussigné(e) Maire de la Commune de "
+    texte = (f"Nous {soussigne_e} Maire de la Commune de "
              f"{commune_name.capitalize()} certifions que "
              f"{titre} {nom_complet}")
 
     if date_naiss:
-        texte += f", né(e) le {date_naiss}"
+        texte += f", {ne_nee} le {date_naiss}"
     if lieu_naiss:
         texte += f" à {lieu_naiss}"
     if nationalite:
@@ -981,9 +1089,9 @@ def _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
     if profession:
         texte += f", exerçant la profession de {profession}"
     if adresse:
-        texte += f", domicilié(e) à {adresse}"
+        texte += f", {domicilie_e} à {adresse}"
 
-    texte += ", est décédé(e)"
+    texte += f", est {decede_e}"
     if date_deces:
         texte += f" le {date_deces}"
     if heure_deces:
@@ -1047,7 +1155,9 @@ def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_re
     
     date_naissance = clean_val(metadata.get('date_naissance_personne') or metadata.get('date_naissance') or (str(citizen.profile.date_of_birth) if citizen and hasattr(citizen, 'profile') else ""), default="")
     heure_naissance = clean_val(metadata.get('heure_naissance'), default="")
-    lieu_naissance = clean_val(metadata.get('lieu_naissance') or (citizen.profile.place_of_birth if citizen and hasattr(citizen, 'profile') else ""), default="")
+    lieu_naissance = clean_val(metadata.get('lieu_naissance') or metadata.get('lieu_naissance_enfant') or (citizen.profile.place_of_birth if citizen and hasattr(citizen, 'profile') else ""), default="")
+    if not lieu_naissance:
+        lieu_naissance = "N/A"
     
     prenom_pere = clean_val(metadata.get('prenom_pere'), default="")
     nom_pere = clean_val(metadata.get('nom_pere'), default="")
@@ -1057,6 +1167,18 @@ def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_re
     nom_mere = clean_val(metadata.get('nom_mere'), default="")
 
     annee_words, mois_part, time_words = get_registration_datetime_in_words(dossier, metadata)
+    
+    # Date établissement acte
+    dt = getattr(dossier, 'completed_at', None) or getattr(dossier, 'submitted_at', None) or getattr(dossier, 'created_at', None) or getattr(dossier, 'updated_at', None)
+    if not dt:
+        from datetime import datetime
+        dt = datetime.now()
+    try:
+        jour_words = number_to_french_words(dt.day)
+    except:
+        jour_words = str(dt.day)
+    date_acte_string = f"L'an {annee_words}, le {jour_words} {mois_part}"
+    
     try:
         num_reg_words = number_to_french_words(int(numero_registre)).upper()
     except:
@@ -1114,8 +1236,14 @@ def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_re
     p.drawCentredString(x_margin + (x_title_right - x_margin) / 2, y_header_bottom - 0.8 * cm, "EXTRAIT DU REGISTRE DES ACTES DE NAISSANCE")
     p.setFont("Helvetica-Oblique", 10)
     p.drawString(x_margin + 0.5 * cm, y_header_bottom - 1.5 * cm, f"Pour l'année {annee_words}")
-    p.setFont("Helvetica", 10)
-    p.drawString(x_margin + 0.5 * cm, y_header_bottom - 2.4 * cm, f"NUMERO: {num_reg_words} DANS LE REGISTRE")
+    text_num = f"NUMERO: {num_reg_words} DANS LE REGISTRE"
+    font_size = 10
+    max_w = (x_title_right - x_margin) - 0.7 * cm
+    while p.stringWidth(text_num, "Helvetica", font_size) > max_w and font_size > 5.5:
+        font_size -= 0.5
+    
+    p.setFont("Helvetica", font_size)
+    p.drawString(x_margin + 0.5 * cm, y_header_bottom - 2.4 * cm, text_num)
     
     # Droite Titre
     p.setFont("Helvetica-Bold", 12)
@@ -1128,19 +1256,24 @@ def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_re
     
     # ── 3. CORPS DE L'ACTE ──
     p.setFont("Helvetica-Bold", 10)
-    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 0.8 * cm, f"L'an {annee_words}, le {date_naissance}") 
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 0.8 * cm, date_acte_string) 
     
+    from utils.pdf_helpers import accord
+    genre_enfant = metadata.get('sexe', '')
+    est_ne_nee = accord(genre_enfant, 'Est né à', 'Est née à', dossier.id if hasattr(dossier, 'id') else dossier.reference)
+
     p.setFont("Helvetica", 10)
-    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 1.8 * cm, "Est né(é) à")
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 1.8 * cm, est_ne_nee)
     p.drawString(x_margin + 2.5 * cm, y_title_bottom - 1.8 * cm, lieu_naissance)
     p.setFont("Helvetica-Oblique", 7)
-    p.drawString(x_margin + 2.5 * cm, y_title_bottom - 2.2 * cm, "HEURE DE NAISSANCE")
-    if heure_naissance:
-        p.setFont("Helvetica-Bold", 9)
-        p.drawString(x_margin + 2.5 * cm, y_title_bottom - 2.6 * cm, heure_naissance)
+    p.drawString(x_margin + 2.5 * cm, y_title_bottom - 2.2 * cm, "LIEU DE NAISSANCE")
         
     p.setFont("Helvetica", 10)
     p.drawString(grid_right - 6.0 * cm, y_title_bottom - 1.8 * cm, "À:")
+    if heure_naissance:
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(grid_right - 5.5 * cm, y_title_bottom - 1.8 * cm, heure_naissance)
+    
     p.setFont("Helvetica-Oblique", 7)
     p.drawString(grid_right - 6.0 * cm, y_title_bottom - 2.2 * cm, "HEURE DE NAISSANCE")
     
@@ -1235,16 +1368,13 @@ def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_re
     p.setFont("Helvetica", 9)
     p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 0.6 * cm, f"Fait à {commune}, le {date_str}")
     p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 1.1 * cm, "L'officier de l'Etat-civil soussigné")
-    p.setFont("Helvetica-Bold", 10)
+    
     officier_name = officier.full_name if officier else "L'Officier de l'État Civil"
-    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 1.8 * cm, officier_name)
-    p.setFont("Helvetica", 9)
-    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 2.3 * cm, "Officier d'Etat Civil")
     
     # Cachets et Signatures
     seal_size = 3.2 * cm
     seal_y = footer_y - 5.5 * cm
-    _draw_signatures_and_seals(p, right_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
+    _draw_signatures_and_seals(p, right_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size, commune, officier_name)
 
 
 def _draw_birth_certificate_content(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader):
@@ -1293,9 +1423,11 @@ def _draw_pdf_content(p, width, height, dossier, officier, timbre_ref, cachet_pa
         ("Année Registre", annee_registre, "Numéro Registre", numero_registre),
     ])
 
+    from utils.pdf_helpers import accord
+    ne_nee_le = accord(sexe, 'Né le', 'Née le', dossier.id if hasattr(dossier, 'id') else dossier.reference)
     y = _draw_cartouche_section(p, width, y, "Informations de l'Enfant", [
         ("Prénoms", prenoms_enfant, "Nom", nom_enfant),
-        ("Né(e) le", date_naissance_personne, "Heure", metadata.get('heure_naissance', 'Non précisée')),
+        (ne_nee_le, date_naissance_personne, "Heure", metadata.get('heure_naissance', 'Non précisée')),
         ("Lieu", lieu_naissance, "Sexe", sexe),
     ])
 
@@ -1311,6 +1443,33 @@ def _draw_pdf_content(p, width, height, dossier, officier, timbre_ref, cachet_pa
         ])
 
     _draw_official_footer(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
+
+
+def get_seal_assets(commune_name):
+    import unicodedata
+    import re
+    import os
+    from django.conf import settings
+    
+    nfkd = unicodedata.normalize('NFKD', commune_name)
+    normalized = u"".join([c for c in nfkd if not unicodedata.combining(c)])
+    normalized = re.sub(r'[\s\-]+', '_', normalized.lower())
+    
+    folder_path = os.path.join(ASSETS_DIR, normalized)
+    cachet_communal_path = ''
+    signature_officier_path = ''
+    cachet_nominal_path = ''
+    
+    if os.path.exists(folder_path):
+        for file in os.listdir(folder_path):
+            if file.startswith('Cachet_Communal') and file.endswith(('.png', '.svg', '.jpg', '.jpeg')):
+                cachet_communal_path = os.path.join(folder_path, file)
+            elif (file.startswith('Signature_Officier') or file.startswith('Signarure_Officier')) and file.endswith(('.png', '.svg', '.jpg', '.jpeg')):
+                signature_officier_path = os.path.join(folder_path, file)
+            elif file.startswith('Cachet_Nominal') and file.endswith(('.png', '.svg', '.jpg', '.jpeg')):
+                cachet_nominal_path = os.path.join(folder_path, file)
+                
+    return cachet_communal_path, signature_officier_path, cachet_nominal_path
 
 
 def generate_signed_certificate(dossier, officier):
@@ -1338,24 +1497,28 @@ def generate_signed_certificate(dossier, officier):
     cachet_nominal_path = ''
 
     if dossier.commune:
+        # 1. Base de données
         if dossier.commune.chemin_cachet_communal:
             cachet_communal_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_cachet_communal)
         if dossier.commune.chemin_signature_officier:
             signature_officier_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_signature_officier)
         if dossier.commune.chemin_cachet_nominal:
             cachet_nominal_path = os.path.join(settings.BASE_DIR, dossier.commune.chemin_cachet_nominal)
+        
+        # 2. Lookup automatique dans assets/seals/[commune]
+        if not cachet_communal_path or not signature_officier_path or not cachet_nominal_path:
+            c_path, s_path, n_path = get_seal_assets(dossier.commune.name)
+            cachet_communal_path = cachet_communal_path or c_path
+            signature_officier_path = signature_officier_path or s_path
+            cachet_nominal_path = cachet_nominal_path or n_path
                     
-    # FALLBACK FOR DEMO/DEV: If cachets are still missing, use dakar_plateau as fallback
-    if not cachet_communal_path or not signature_officier_path or not cachet_nominal_path:
-        folder_path = os.path.join(ASSETS_DIR, 'dakar_plateau')
-        if os.path.exists(folder_path):
-            for file in os.listdir(folder_path):
-                if file.startswith('Cachet_Communal') and file.endswith('.png'):
-                    cachet_communal_path = os.path.join(folder_path, file)
-                elif file.startswith('Signarure_Officier') and file.endswith('.png'):
-                    signature_officier_path = os.path.join(folder_path, file)
-                elif file.startswith('Cachet_Nominal') and file.endswith('.png'):
-                    cachet_nominal_path = os.path.join(folder_path, file)
+    # FALLBACK: Utilisation de sceaux/signatures dynamiques si non configurés
+    if not cachet_communal_path:
+        cachet_communal_path = 'DYNAMIC'
+    if not signature_officier_path:
+        signature_officier_path = 'DYNAMIC'
+    if not cachet_nominal_path:
+        cachet_nominal_path = 'DYNAMIC'
 
     # --- Règle Métier R3 : Vérification des 4 éléments de validation ---
     if not cachet_communal_path or not signature_officier_path or not cachet_nominal_path or not timbre:
@@ -1481,16 +1644,13 @@ def generate_marriage_certificate_pdf(dossier, cachet_path=None, signature_path=
 
     # 1. EN-TÊTE
     region = meta.get('region', '[NON RENSEIGNÉ]').upper()
-    ville = meta.get('ville', '[NON RENSEIGNÉ]').upper()
-    arrond = meta.get('arrondissement', '[NON RENSEIGNÉ]').upper()
+    departement = meta.get('departement', '[NON RENSEIGNÉ]').upper()
+    commune_name = meta.get('commune', '[NON RENSEIGNÉ]').upper()
     
     left_header = f"""
     <b><u>REGION DE {region}</u></b><br/>
-    <b><u>VILLE DE {ville}</u></b><br/>
-    <b>COMMUNE D'ARRONDISSEMENT</b><br/>
-    <b><u>DE {arrond}</u></b><br/>
-    <b>CENTRE SECONDAIRE</b><br/>
-    <b>EX-GRAND DAKAR</b><br/>
+    <b><u>DEPARTEMENT DE {departement}</u></b><br/>
+    <b>COMMUNE DE {commune_name}</b><br/>
     _______
     """
     
