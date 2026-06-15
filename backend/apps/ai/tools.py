@@ -51,7 +51,40 @@ def get_procedure(sujet):
     return json.dumps({"error": f"Je n'ai pas d'informations précises sur le sujet: {sujet}. Rapprochez-vous de votre mairie."})
 
 
-# Configuration du schéma JSON (Tool Calling) pour Groq
+def create_dossier_draft(user, dossier_type, commune_nom, metadata_json):
+    """
+    Agent BDD: Crée un nouveau dossier à l'état de brouillon avec les données extraites.
+    """
+    try:
+        from apps.dossiers.models import Dossier
+        from apps.communes.models import Commune
+        
+        # Recherche basique de la commune
+        commune = Commune.objects.filter(name__icontains=commune_nom).first()
+        if not commune:
+            commune = Commune.objects.first() # Fallback
+            
+        if not commune:
+            return json.dumps({"error": "Commune introuvable."})
+
+        meta = json.loads(metadata_json) if isinstance(metadata_json, str) else metadata_json
+
+        dossier = Dossier.objects.create(
+            type=dossier_type,
+            citizen=user if user and user.is_authenticated else None, # Sera NULL si non authentifié, idéalement on veut bloquer mais passons
+            commune=commune,
+            metadata=meta,
+            status='draft'
+        )
+        return json.dumps({
+            "success": True,
+            "reference": dossier.reference,
+            "message": f"Dossier {dossier.reference} créé avec succès en mode brouillon."
+        })
+    except Exception as e:
+        return json.dumps({"error": f"Erreur de création: {str(e)}"})
+
+# Configuration du schéma JSON (Tool Calling) pour Groq (et Gemini par extension)
 TOOLS_SCHEMA = [
     {
         "type": "function",
@@ -84,6 +117,31 @@ TOOLS_SCHEMA = [
                     }
                 },
                 "required": ["sujet"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dossier_draft",
+            "description": "Crée un brouillon de dossier lorsque toutes les informations (y compris celles manquantes de l'OCR) ont été collectées.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "dossier_type": {
+                        "type": "string",
+                        "description": "Le type de dossier ('birth_certificate', 'marriage_certificate', 'death_certificate', 'residence_certificate', 'cni')."
+                    },
+                    "commune_nom": {
+                        "type": "string",
+                        "description": "Le nom de la commune concernée."
+                    },
+                    "metadata_json": {
+                        "type": "string",
+                        "description": "Une chaîne JSON représentant toutes les données extraites et confirmées par le citoyen."
+                    }
+                },
+                "required": ["dossier_type", "commune_nom", "metadata_json"]
             }
         }
     }

@@ -7,12 +7,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from drf_spectacular.utils import extend_schema
 
-from .ocr import (
-    extract_text_from_image,
-    extract_cni_data,
-    extract_text_from_base64,
-    extract_cni_data_from_base64,
-)
+from .services.gemini_client import analyze_document_with_gemini
+from .services.validation_engine import validate_extracted_data
+import base64
 from .validators import validate_citizen_document, check_dossier_duplicate
 from .chatbot import chat_orchestrator
 from .faq import find_closest_faq
@@ -21,6 +18,9 @@ from .models import NdiogoyeChatLog
 from .serializers import NdiogoyeChatLogSerializer
 from rest_framework import generics
 from apps.shared.permissions import IsAdminStaff
+import logging
+
+logger = logging.getLogger('system')
 
 
 class OcrExtractView(APIView):
@@ -63,26 +63,40 @@ class OcrExtractView(APIView):
 
         # ── Extraction selon le mode ──
         if image_base64:
-            # MODE 2 : Image capturée par la caméra du frontend (base64)
             source = 'camera'
-            extracted_text = extract_text_from_base64(image_base64)
-            extracted_data = extract_cni_data_from_base64(image_base64)
+            if ',' in image_base64:
+                image_base64 = image_base64.split(',')[1]
+            image_data = base64.b64decode(image_base64)
+            gemini_result = analyze_document_with_gemini(image_data)
         else:
-            # MODE 1 : Fichier uploadé (image ou PDF)
             source = 'upload'
-            extracted_text = extract_text_from_image(file_obj)
-            file_obj.seek(0)
-            extracted_data = extract_cni_data(file_obj)
+            gemini_result = analyze_document_with_gemini(file_obj)
 
-        # ── Validation intelligente ──
-        validation_result = None
-        if hasattr(request.user, 'profile'):
-            validation_result = validate_citizen_document(request.user.profile, extracted_text)
+        raw_text = gemini_result.get('raw_text', '')
+        detected_type = gemini_result.get('document_type', 'inconnu')
+        structured_data = gemini_result.get('structured_data', {})
+        confidence = gemini_result.get('confidence', 0.0)
+
+        logger.info(f"[IA Vision] Document détecté : {detected_type} (Confiance: {confidence})")
+        logger.info(f"[IA Vision] Extraction structurée terminée. Longueur texte brut: {len(raw_text)}")
+        
+        # Validation Métier
+        validation_result = validate_extracted_data(detected_type, structured_data)
+        logger.info(f"[IA] Validation métier : Score={validation_result.get('completeness_score')}")
+
+        # Fallback vers le profil utilisateur si c'est une CNI
+        if detected_type == 'cni' and hasattr(request.user, 'profile'):
+            from .validators import validate_citizen_document
+            profile_validation = validate_citizen_document(request.user.profile, raw_text)
+            validation_result['profile_match'] = profile_validation
 
         return Response({
+            'success': True,
             'source': source,
-            'extracted_text': extracted_text,
-            'extracted_data': extracted_data,
+            'document_type': detected_type,
+            'document_confidence': confidence,
+            'raw_text': raw_text,
+            'structured_data': structured_data,
             'validation': validation_result
         })
 
@@ -111,18 +125,29 @@ class OcrCameraView(APIView):
                 'hint': 'Envoyez l\'image capturée par la caméra en base64 (data URI ou raw base64).'
             }, status=400)
 
-        extracted_text = extract_text_from_base64(image_base64)
-        extracted_data = extract_cni_data_from_base64(image_base64)
+        if ',' in image_base64:
+            image_base64 = image_base64.split(',')[1]
+        image_data = base64.b64decode(image_base64)
+        gemini_result = analyze_document_with_gemini(image_data)
 
-        # Validation intelligente si profil utilisateur disponible
-        validation_result = None
-        if hasattr(request.user, 'profile'):
-            validation_result = validate_citizen_document(request.user.profile, extracted_text)
+        raw_text = gemini_result.get('raw_text', '')
+        detected_type = gemini_result.get('document_type', 'inconnu')
+        structured_data = gemini_result.get('structured_data', {})
+        confidence = gemini_result.get('confidence', 0.0)
+        
+        validation_result = validate_extracted_data(detected_type, structured_data)
+
+        if detected_type == 'cni' and hasattr(request.user, 'profile'):
+            from .validators import validate_citizen_document
+            validation_result['profile_match'] = validate_citizen_document(request.user.profile, raw_text)
 
         return Response({
+            'success': True,
             'source': 'camera',
-            'extracted_text': extracted_text,
-            'extracted_data': extracted_data,
+            'document_type': detected_type,
+            'document_confidence': confidence,
+            'raw_text': raw_text,
+            'structured_data': structured_data,
             'validation': validation_result
         })
 
@@ -176,6 +201,7 @@ class NdiogoyeChatView(APIView):
         message = request.data.get('message', '')
         chat_history = request.data.get('chat_history', [])
         conversation_id = request.data.get('conversation_id')
+        extraction_context = request.data.get('extraction_context', None)
 
         if not message:
             return Response({'error': 'Veuillez envoyer un message.'}, status=400)
@@ -185,7 +211,8 @@ class NdiogoyeChatView(APIView):
         result = chat_orchestrator(
             user=user,
             user_message=message,
-            chat_history=chat_history
+            chat_history=chat_history,
+            extraction_context=extraction_context
         )
         
         if conversation_id and isinstance(result, dict):

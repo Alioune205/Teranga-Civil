@@ -1,19 +1,21 @@
 """
-Chatbot Orchestrator via Groq API (Agentic RAG+).
+Chatbot Orchestrator via Gemini 2.5 Flash API (Agentic RAG+).
 """
 import os
 import json
-from groq import Groq
-from django.conf import settings
-from .tools import TOOLS_SCHEMA, get_dossier_status, get_procedure
+import logging
+from decouple import config
+from google import genai
+from google.genai import types
+from .tools import get_dossier_status, get_procedure, create_dossier_draft
 
-# Initialisation du client Groq
-# On récupère la clé depuis les variables d'environnement (settings)
-def get_groq_client():
-    api_key = getattr(settings, 'GROQ_API_KEY', os.environ.get('GROQ_API_KEY'))
+logger = logging.getLogger(__name__)
+
+def get_gemini_client():
+    api_key = config("GEMINI_API_KEY", default=None)
     if not api_key:
-        raise ValueError("La clé GROQ_API_KEY n'est pas configurée.")
-    return Groq(api_key=api_key)
+        raise ValueError("La clé GEMINI_API_KEY n'est pas configurée.")
+    return genai.Client(api_key=api_key)
 
 SYSTEM_PROMPT = """Tu es Ndiogoye, l'assistant administratif intelligent de TERANGA CIVIL (système d'état civil du Sénégal).
 Ton rôle est d'aider les citoyens avec leurs démarches et de suivre leurs dossiers.
@@ -27,77 +29,59 @@ IMPORTANT: Tu dois TOUJOURS formater ta réponse finale (lorsque tu t'adresses �
 - "reply": ton message texte en français pour le citoyen.
 N'ajoute aucun texte avant ou après l'objet JSON. Réponds UNIQUEMENT avec le JSON."""
 
-def chat_orchestrator(user, user_message, chat_history=None):
+def chat_orchestrator(user, user_message, chat_history=None, extraction_context=None):
     """
     Orchestre la discussion avec l'utilisateur, et décide s'il faut appeler un sous-agent.
     """
     if chat_history is None:
         chat_history = []
         
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + chat_history
-    messages.append({"role": "user", "content": user_message})
-    
+    current_system_prompt = SYSTEM_PROMPT
+    if extraction_context:
+        current_system_prompt += f"\n\nCONTEXTE D'EXTRACTION OCR EN COURS:\nL'utilisateur est en train de soumettre un document. Des champs n'ont pas pu être lus automatiquement.\nVoici l'état actuel de l'extraction : {json.dumps(extraction_context, ensure_ascii=False)}\nTon objectif prioritaire est de guider poliment l'utilisateur pour qu'il te fournisse les informations listées dans 'missing_fields'. Une fois que tu as obtenu TOUTES les informations manquantes, appelle l'outil create_dossier_draft pour sauvegarder le brouillon."
+
     try:
-        client = get_groq_client()
-        # Modèle rapide et intelligent pour le Tool Calling
-        model_name = "llama-3.3-70b-versatile"
+        client = get_gemini_client()
         
-        # 1. Premier appel à Groq avec les outils disponibles
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            tools=TOOLS_SCHEMA,
-            tool_choice="auto",
+        def tool_get_dossier_status(reference: str) -> str:
+            """Récupère le statut actuel d'un dossier administratif via sa référence (ex: DOS-123456)."""
+            return get_dossier_status(user, reference)
+            
+        def tool_get_procedure(sujet: str) -> str:
+            """Récupère les informations et les documents requis pour une procédure spécifique (mariage, naissance, deces, delai, prix)."""
+            return get_procedure(sujet)
+            
+        def tool_create_dossier_draft(dossier_type: str, commune_nom: str, metadata_json: str) -> str:
+            """Crée un brouillon de dossier lorsque toutes les informations (y compris celles manquantes de l'OCR) ont été collectées."""
+            return create_dossier_draft(user, dossier_type, commune_nom, metadata_json)
+
+        my_tools = [tool_get_dossier_status, tool_get_procedure, tool_create_dossier_draft]
+
+        # Convert history to Gemini format
+        formatted_history = []
+        for msg in chat_history:
+            role = "user" if msg["role"] == "user" else "model"
+            content = msg.get("content", "")
+            if content:
+                formatted_history.append(
+                    types.Content(role=role, parts=[types.Part.from_text(text=content)])
+                )
+
+        chat = client.chats.create(
+            model='gemini-2.5-flash',
+            config=types.GenerateContentConfig(
+                system_instruction=current_system_prompt,
+                tools=my_tools,
+                temperature=0.1,
+            ),
+            history=formatted_history
         )
         
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
-        
-        final_content = response_message.content
-        
-        # 2. Si Groq décide d'appeler un outil (Agent BDD ou Agent FAQ)
-        if tool_calls:
-            # On ajoute la réponse de l'assistant (avec l'appel d'outil) à l'historique
-            messages.append(response_message)
-            
-            for tool_call in tool_calls:
-                function_name = tool_call.function.name
-                function_args = json.loads(tool_call.function.arguments)
-                
-                # Exécution du bon outil
-                if function_name == "get_dossier_status":
-                    tool_response = get_dossier_status(
-                        user=user,
-                        reference=function_args.get("reference")
-                    )
-                elif function_name == "get_procedure":
-                    tool_response = get_procedure(
-                        sujet=function_args.get("sujet")
-                    )
-                else:
-                    tool_response = json.dumps({"error": "Outil inconnu"})
-                    
-                # 3. Ajout du résultat de l'outil à la conversation
-                messages.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "role": "tool",
-                        "name": function_name,
-                        "content": tool_response,
-                    }
-                )
-                
-            # 4. Deuxième appel à Groq pour générer la réponse finale avec les données récupérées
-            second_response = client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                response_format={"type": "json_object"}
-            )
-            final_content = second_response.choices[0].message.content
-            
-        # Si aucun outil n'est appelé, on retourne la réponse directe parsée
+        response = chat.send_message(user_message)
+        final_content = response.text
+
+        # Si le modèle renvoie du JSON, on le nettoie et on le parse
         try:
-            # Parfois le LLM rajoute des backticks markdown (```json ... ```)
             clean_content = final_content.strip()
             if clean_content.startswith('```json'):
                 clean_content = clean_content[7:]
@@ -112,8 +96,9 @@ def chat_orchestrator(user, user_message, chat_history=None):
                 "action": "none",
                 "reply": final_content or "Désolé, je n'ai pas pu générer une réponse valide."
             }
-        
+            
     except Exception as e:
+        logger.error(f"Erreur Chatbot Gemini : {e}")
         return {
             "intent": "erreur",
             "action": "none",

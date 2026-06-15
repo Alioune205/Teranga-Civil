@@ -55,6 +55,10 @@ pip install -r requirements.txt
    DB_PASSWORD=votre_mot_de_passe
    DB_HOST=127.0.0.1
    DB_PORT=5432
+   
+   # IA & OCR
+   GROQ_API_KEY=votre_cle_groq
+   GEMINI_API_KEY=votre_cle_gemini_vision
    ```
 
 ### 6. Appliquer les Migrations & Charger les Données de Test (Seed)
@@ -111,3 +115,21 @@ La documentation interactive de l'API est générée automatiquement et accessib
 - **Swagger UI** : `http://127.0.0.1:8000/api/docs/`
 - **ReDoc** : `http://127.0.0.1:8000/api/docs/redoc/`
 - **Schéma Schema JSON** : `http://127.0.0.1:8000/api/docs/schema/`
+
+---
+
+## 🤖 Pipeline IA & OCR (Module DEV 1D)
+
+L'architecture IA du backend est propulsée par **Gemini 2.5 Flash** (pour la vision et l'OCR) et **Llama 3.3** (pour le Chatbot via Groq).
+
+### Workflow d'Extraction (Pré-remplissage)
+1. **Frontend / Mobile** envoie une image (ou PDF) via `/api/ai/ocr/extract/` (Upload multipart ou Base64 Caméra).
+2. **Gemini Vision** analyse le document, lit le texte (même manuscrit ou de mauvaise qualité) et classifie le type (`acte_naissance`, `cni`, etc.).
+3. **Extraction Structurée** : Gemini renvoie un objet JSON propre.
+4. **Validation Métier** : Le backend vérifie si des champs obligatoires sont manquants (ex: `date_naissance` non lue) et attribue un `completeness_score`.
+5. **Frontend / Ndiogoye** : Reçoit ce JSON pour pré-remplir les formulaires de l'utilisateur ou pour déclencher Ndiogoye qui demandera les `missing_fields`.
+
+### Assistant Ndiogoye
+Ndiogoye (`/api/ai/ndiogoye/chat/`) est capable de :
+- Poser des questions administratives (FAQ RAG+).
+- Recevoir le `extraction_context` (contenant les `missing_fields` de l'OCR) pour interroger le citoyen de manière conversationnelle et l'aider à compléter son dossier.
