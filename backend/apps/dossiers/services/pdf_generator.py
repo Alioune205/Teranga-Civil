@@ -133,6 +133,28 @@ def _draw_placeholder_seal(c, x, y, size, label):
     c.restoreState()
 
 
+def _draw_signatures_and_seals(p, x_start, y_start, cachet_path, signature_path, cachet_nominal_path, seal_size=3.2 * cm):
+    """
+    Fonction réutilisable pour dessiner les 3 éléments de validation
+    (Cachet communal, Signature de l'officier, Cachet nominal)
+    avec un espacement optimal empêchant les chevauchements.
+    """
+    import os
+    from reportlab.lib.utils import ImageReader
+    from reportlab.lib.units import cm
+    
+    # Cachet communal (gauche)
+    _draw_seal(p, cachet_path, x_start + 0.2 * cm, y_start + 0.2 * cm, seal_size)
+    
+    # Signature manuscrite (centre) - taille réduite et centrée
+    if signature_path and os.path.exists(signature_path):
+        p.drawImage(ImageReader(signature_path), x_start + 3.8 * cm, y_start + 0.8 * cm, width=2.4 * cm, height=1.2 * cm, mask='auto')
+        
+    # Cachet nominal (droite)
+    if cachet_nominal_path:
+        _draw_seal(p, cachet_nominal_path, x_start + 6.6 * cm, y_start + 0.3 * cm, seal_size)
+
+
 def _generate_raw_pdf(dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path):
     """
     Génère le contenu PDF brut (SANS QR Code).
@@ -152,6 +174,9 @@ def _generate_raw_pdf(dossier, officier, timbre_ref, cachet_path, signature_path
                           cachet_path, signature_path, cachet_nominal_path, qr_image_reader=None)
     elif dossier.type == 'death_certificate':
         _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
+                          cachet_path, signature_path, cachet_nominal_path, qr_image_reader=None)
+    elif dossier.type == 'birth_certificate':
+        _draw_birth_certificate_content(p, width, height, dossier, officier, timbre_ref,
                           cachet_path, signature_path, cachet_nominal_path, qr_image_reader=None)
     else:
         _draw_pdf_content(p, width, height, dossier, officier, timbre_ref,
@@ -198,6 +223,9 @@ def _generate_final_pdf(dossier, officier, timbre_ref, cachet_path,
                           cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
     elif dossier.type == 'death_certificate':
         _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
+                          cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
+    elif dossier.type == 'birth_certificate':
+        _draw_birth_certificate_content(p, width, height, dossier, officier, timbre_ref,
                           cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
     else:
         _draw_pdf_content(p, width, height, dossier, officier, timbre_ref,
@@ -355,11 +383,7 @@ def _draw_official_footer(p, width, height, dossier, officier, timbre_ref, cache
 
     seal_size = 3.2 * cm
     seal_y = footer_y - 4.5 * cm
-    _draw_seal(p, cachet_path, sig_zone_x, seal_y, seal_size)
-    if signature_path and os.path.exists(signature_path):
-        p.drawImage(ImageReader(signature_path), sig_zone_x + 3.0*cm, seal_y + 0.5*cm, width=3.0*cm, height=1.5*cm, mask='auto')
-    if cachet_nominal_path:
-        _draw_seal(p, cachet_nominal_path, sig_zone_x + 5.8*cm, seal_y, seal_size)
+    _draw_signatures_and_seals(p, sig_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
 
     p.setFillColor(COLOR_GRIS)
     p.setFont("Helvetica-Oblique", 7)
@@ -775,16 +799,8 @@ def generate_marriage_certificate_v2(p, width, height, dossier, officier, timbre
     seal_size = 3.2 * cm
     seal_y = 1.0 * cm
     
-    # Cachet communal
-    _draw_seal(p, cachet_path, sig_zone_x + 0.2 * cm, seal_y + 0.2 * cm, seal_size)
-    
-    # Signature manuscrite
-    if signature_path and os.path.exists(signature_path):
-        p.drawImage(ImageReader(signature_path), sig_zone_x + 3.8 * cm, seal_y + 0.8 * cm, width=2.4 * cm, height=1.2 * cm, mask='auto')
-        
-    # Cachet nominal
-    if cachet_nominal_path:
-        _draw_seal(p, cachet_nominal_path, sig_zone_x + 6.6 * cm, seal_y + 0.3 * cm, seal_size)
+    # Cachets + signature
+    _draw_signatures_and_seals(p, sig_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
 
     # QR Code et Timbre Fiscal (Discrets en bas à gauche)
     qr_x = 2.0 * cm
@@ -902,13 +918,7 @@ def _draw_deces_footer(p, width, height, dossier, officier, timbre_ref,
     # ── Cachets + signature ──────────────────────────────────────
     seal_size = 3.2 * cm
     seal_y    = footer_top - 5.0 * cm
-    _draw_seal(p, cachet_path, sig_x, seal_y, seal_size)
-    if signature_path and os.path.exists(signature_path):
-        p.drawImage(ImageReader(signature_path),
-                    sig_x + 3.0 * cm, seal_y + 0.5 * cm,
-                    width=3.0 * cm, height=1.5 * cm, mask='auto')
-    if cachet_nominal_path:
-        _draw_seal(p, cachet_nominal_path, sig_x + 5.8 * cm, seal_y, seal_size)
+    _draw_signatures_and_seals(p, sig_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
 
     # ── Mention légale ───────────────────────────────────────────
     p.setFillColor(HexColor('#888888'))
@@ -1013,6 +1023,232 @@ def _draw_deces_pdf_content(p, width, height, dossier, officier, timbre_ref,
                        cachet_path, signature_path, cachet_nominal_path,
                        qr_image_reader)
 
+
+def generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader):
+    from reportlab.lib.units import cm
+    from reportlab.lib.colors import HexColor
+    from datetime import datetime
+    
+    NOIR = HexColor('#000000')
+    metadata = dossier.metadata or {}
+    citizen = dossier.citizen
+
+    # --- Données de base ---
+    region = dossier.commune.region.upper() if dossier.commune and dossier.commune.region else "N/A"
+    departement = dossier.commune.department.upper() if dossier.commune and hasattr(dossier.commune, 'department') and dossier.commune.department else "N/A"
+    commune = dossier.commune.name.upper() if dossier.commune else "N/A"
+    
+    annee_registre = str(metadata.get('annee_registre', 'N/A'))
+    numero_registre = str(metadata.get('numero_registre') or metadata.get('registre', 'N/A'))
+    
+    prenoms_enfant = clean_val(metadata.get('prenoms_enfant') or (citizen.first_name if citizen else ""), default="")
+    nom_enfant = clean_val(metadata.get('nom_enfant') or (citizen.last_name if citizen else ""), default="")
+    sexe = clean_val(metadata.get('sexe') or (citizen.profile.get_gender_display() if citizen and hasattr(citizen, 'profile') else ""), default="N/A").upper()
+    
+    date_naissance = clean_val(metadata.get('date_naissance_personne') or metadata.get('date_naissance') or (str(citizen.profile.date_of_birth) if citizen and hasattr(citizen, 'profile') else ""), default="")
+    heure_naissance = clean_val(metadata.get('heure_naissance'), default="")
+    lieu_naissance = clean_val(metadata.get('lieu_naissance') or (citizen.profile.place_of_birth if citizen and hasattr(citizen, 'profile') else ""), default="")
+    
+    prenom_pere = clean_val(metadata.get('prenom_pere'), default="")
+    nom_pere = clean_val(metadata.get('nom_pere'), default="")
+    nom_prenom_pere = f"{prenom_pere} {nom_pere}".strip() if prenom_pere or nom_pere else "N/A"
+    
+    prenom_mere = clean_val(metadata.get('prenom_mere'), default="")
+    nom_mere = clean_val(metadata.get('nom_mere'), default="")
+
+    annee_words, mois_part, time_words = get_registration_datetime_in_words(dossier, metadata)
+    try:
+        num_reg_words = number_to_french_words(int(numero_registre)).upper()
+    except:
+        num_reg_words = numero_registre
+
+    # Format de la grille : marges
+    x_margin = 1.0 * cm
+    grid_w = width - 2.0 * cm
+    grid_right = width - 1.0 * cm
+    
+    y_top = height - 1.5 * cm
+    y_header_bottom = y_top - 3.5 * cm
+    y_title_bottom = y_header_bottom - 3.0 * cm
+    y_body_bottom = y_title_bottom - 9.0 * cm
+    y_jugement_bottom = y_body_bottom - 4.0 * cm
+    y_marginal_bottom = y_jugement_bottom - 2.0 * cm
+    
+    # Dessin de la grille (lignes extérieures)
+    p.setStrokeColor(NOIR)
+    p.setLineWidth(1.2)
+    p.rect(x_margin, y_marginal_bottom, grid_w, y_top - y_marginal_bottom)
+    
+    # Lignes horizontales
+    p.line(x_margin, y_header_bottom, grid_right, y_header_bottom)
+    p.line(x_margin, y_title_bottom, grid_right, y_title_bottom)
+    p.line(x_margin, y_body_bottom, grid_right, y_body_bottom)
+    p.line(x_margin, y_jugement_bottom, grid_right, y_jugement_bottom)
+    
+    # ── 1. EN-TÊTE ──
+    x_mid_header = x_margin + 9.5 * cm
+    p.line(x_mid_header, y_header_bottom, x_mid_header, y_top)
+    
+    # Gauche
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(x_margin + 2.0 * cm, y_top - 0.8 * cm, f"REGION: {region}")
+    p.drawString(x_margin + 2.0 * cm, y_top - 1.8 * cm, f"DEPARTEMENT: {departement}")
+    p.drawString(x_margin + 2.0 * cm, y_top - 2.8 * cm, f"COMMUNE: {commune}")
+    
+    # Droite
+    x_right_center = x_mid_header + (grid_right - x_mid_header) / 2
+    p.drawCentredString(x_right_center, y_top - 0.6 * cm, "REPUBLIQUE DU SENEGAL")
+    p.setFont("Helvetica-Oblique", 9)
+    p.drawCentredString(x_right_center, y_top - 1.1 * cm, "Un Peuple - Un But - Une Foi")
+    p.setFont("Helvetica-Bold", 16)
+    p.drawCentredString(x_right_center, y_top - 1.9 * cm, "ETAT-CIVIL")
+    p.setFont("Helvetica", 9)
+    p.drawCentredString(x_right_center, y_top - 2.5 * cm, "CENTRE PRINCIPAL (1)")
+    p.drawCentredString(x_right_center, y_top - 3.1 * cm, f"{commune} CENTRE PRINCIPAL")
+    
+    # ── 2. BANDEAU TITRE ──
+    x_title_right = grid_right - 3.5 * cm
+    p.line(x_title_right, y_title_bottom, x_title_right, y_header_bottom)
+    
+    p.setFont("Helvetica-Bold", 16)
+    p.drawCentredString(x_margin + (x_title_right - x_margin) / 2, y_header_bottom - 0.8 * cm, "EXTRAIT DU REGISTRE DES ACTES DE NAISSANCE")
+    p.setFont("Helvetica-Oblique", 10)
+    p.drawString(x_margin + 0.5 * cm, y_header_bottom - 1.5 * cm, f"Pour l'année {annee_words}")
+    p.setFont("Helvetica", 10)
+    p.drawString(x_margin + 0.5 * cm, y_header_bottom - 2.4 * cm, f"NUMERO: {num_reg_words} DANS LE REGISTRE")
+    
+    # Droite Titre
+    p.setFont("Helvetica-Bold", 12)
+    p.drawCentredString(x_title_right + 1.75 * cm, y_header_bottom - 0.8 * cm, f"AN {annee_registre}")
+    p.setFont("Helvetica-Bold", 14)
+    p.drawCentredString(x_title_right + 1.75 * cm, y_header_bottom - 1.8 * cm, f"{numero_registre}")
+    p.setFont("Helvetica", 7)
+    p.drawCentredString(x_title_right + 1.75 * cm, y_header_bottom - 2.4 * cm, "1er dans le registre en")
+    p.drawCentredString(x_title_right + 1.75 * cm, y_header_bottom - 2.7 * cm, "chiffres")
+    
+    # ── 3. CORPS DE L'ACTE ──
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 0.8 * cm, f"L'an {annee_words}, le {date_naissance}") 
+    
+    p.setFont("Helvetica", 10)
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 1.8 * cm, "Est né(é) à")
+    p.drawString(x_margin + 2.5 * cm, y_title_bottom - 1.8 * cm, lieu_naissance)
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(x_margin + 2.5 * cm, y_title_bottom - 2.2 * cm, "HEURE DE NAISSANCE")
+    if heure_naissance:
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(x_margin + 2.5 * cm, y_title_bottom - 2.6 * cm, heure_naissance)
+        
+    p.setFont("Helvetica", 10)
+    p.drawString(grid_right - 6.0 * cm, y_title_bottom - 1.8 * cm, "À:")
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(grid_right - 6.0 * cm, y_title_bottom - 2.2 * cm, "HEURE DE NAISSANCE")
+    
+    p.setFont("Helvetica", 10)
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 3.2 * cm, f"Un enfant de sexe {sexe}")
+    
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(x_margin + 1.5 * cm, y_title_bottom - 4.5 * cm, prenoms_enfant.upper())
+    p.drawString(grid_right - 8.0 * cm, y_title_bottom - 4.5 * cm, nom_enfant.upper())
+    
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(x_margin + 1.5 * cm, y_title_bottom - 5.0 * cm, "PRENOMS")
+    p.drawString(grid_right - 8.0 * cm, y_title_bottom - 5.0 * cm, "NOM DE FAMILLE")
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 6.2 * cm, "DE")
+    p.setFont("Helvetica", 12)
+    p.drawString(x_margin + 1.5 * cm, y_title_bottom - 6.2 * cm, nom_prenom_pere.upper())
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(x_margin + 1.5 * cm, y_title_bottom - 6.7 * cm, "NOM ET PRENOM DU PERE")
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(x_margin + 0.5 * cm, y_title_bottom - 7.9 * cm, "ET DE")
+    p.setFont("Helvetica", 12)
+    p.drawString(x_margin + 2.0 * cm, y_title_bottom - 7.9 * cm, prenom_mere.upper())
+    p.drawString(grid_right - 8.0 * cm, y_title_bottom - 7.9 * cm, nom_mere.upper())
+    p.setFont("Helvetica-Oblique", 7)
+    p.drawString(x_margin + 2.0 * cm, y_title_bottom - 8.4 * cm, "PRENOMS DE LA MERE")
+    p.drawString(grid_right - 8.0 * cm, y_title_bottom - 8.4 * cm, "NOM DE FAMILLE DE LA MERE")
+    
+    # ── 4. JUGEMENT (MENTION) ──
+    x_jug_rot = x_margin + 1.5 * cm
+    x_jug_right = grid_right - 2.5 * cm
+    p.line(x_jug_rot, y_body_bottom, x_jug_rot, y_jugement_bottom)
+    p.line(x_jug_right, y_body_bottom, x_jug_right, y_jugement_bottom)
+    
+    # Texte tourné
+    p.saveState()
+    p.translate(x_margin + 0.6 * cm, y_jugement_bottom + 0.5 * cm)
+    p.rotate(90)
+    p.setFont("Helvetica-Bold", 8)
+    p.drawString(0, 0, "Mention de jugement")
+    p.drawString(0, -0.35 * cm, "et de transcription")
+    p.drawString(0, -0.70 * cm, "en marge (2)")
+    p.restoreState()
+    
+    est_jugement = metadata.get('est_jugement_suppletif')
+    if est_jugement:
+        p.setFont("Helvetica", 9)
+        tribunal = metadata.get('tribunal_competent', '')
+        p.drawString(x_jug_rot + 0.5 * cm, y_body_bottom - 0.7 * cm, f"Délivré par le Président du {tribunal}")
+        p.drawString(x_jug_rot + 0.5 * cm, y_body_bottom - 1.4 * cm, f"Le {metadata.get('date_jugement', '')}")
+        p.drawString(x_jug_rot + 0.5 * cm, y_body_bottom - 2.4 * cm, f"sous le numéro {metadata.get('numero_jugement', '')}")
+        p.drawString(x_jug_rot + 0.5 * cm, y_body_bottom - 3.2 * cm, f"inscrit le {metadata.get('date_inscription', '')} dans le registre des actes de naissance de l'année")
+        
+        p.setFont("Helvetica-Bold", 9)
+        p.drawCentredString(x_jug_right + 1.25 * cm, y_body_bottom - 1.0 * cm, f"AN {metadata.get('annee_inscription', '')}")
+        p.drawCentredString(x_jug_right + 1.25 * cm, y_body_bottom - 2.4 * cm, f"N° {metadata.get('numero_jugement', '')}")
+        p.drawCentredString(x_jug_right + 1.25 * cm, y_body_bottom - 3.2 * cm, f"AN {metadata.get('annee_inscription', '')}")
+        
+    # ── 5. MENTIONS MARGINALES ──
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(x_margin + 0.2 * cm, y_jugement_bottom - 0.6 * cm, "MENTIONS MARGINALES")
+    
+    # ── 6. PIED DE PAGE ──
+    footer_y = y_marginal_bottom - 1.5 * cm
+    
+    # Gauche
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(x_margin, footer_y, "EXTRAIT DELIVRE PAR LE CENTRE PRINCIPAL:")
+    p.drawString(x_margin, footer_y - 0.5 * cm, f"{commune} CENTRE PRINCIPAL")
+    
+    qr_x = x_margin
+    qr_size = 2.5 * cm
+    qr_y = footer_y - 4.0 * cm
+    if qr_image_reader:
+        p.drawImage(qr_image_reader, qr_x, qr_y, width=qr_size, height=qr_size)
+        p.setFont("Helvetica", 6.5)
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.3 * cm, "Scannez pour vérifier")
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.55 * cm, "l'authenticité")
+        p.drawCentredString(qr_x + qr_size / 2, qr_y - 0.8 * cm, f"Réf : {dossier.reference}")
+
+    if timbre_ref:
+        _draw_secure_timbre(p, qr_x + qr_size + 0.5 * cm, qr_y + 0.5 * cm, timbre_ref)
+        
+    # Droite
+    right_zone_x = width - 11.0 * cm
+    date_str = (dossier.updated_at.strftime('%d/%m/%Y') if dossier.updated_at else datetime.now().strftime('%d/%m/%Y'))
+    
+    p.setFont("Helvetica-Bold", 10)
+    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y, "POUR EXTRAIT CERTIFIE CONFORME")
+    p.setFont("Helvetica", 9)
+    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 0.6 * cm, f"Fait à {commune}, le {date_str}")
+    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 1.1 * cm, "L'officier de l'Etat-civil soussigné")
+    p.setFont("Helvetica-Bold", 10)
+    officier_name = officier.full_name if officier else "L'Officier de l'État Civil"
+    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 1.8 * cm, officier_name)
+    p.setFont("Helvetica", 9)
+    p.drawCentredString(right_zone_x + 5.0 * cm, footer_y - 2.3 * cm, "Officier d'Etat Civil")
+    
+    # Cachets et Signatures
+    seal_size = 3.2 * cm
+    seal_y = footer_y - 5.5 * cm
+    _draw_signatures_and_seals(p, right_zone_x, seal_y, cachet_path, signature_path, cachet_nominal_path, seal_size)
+
+
+def _draw_birth_certificate_content(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader):
+    generate_birth_certificate_v2(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader)
 
 def _draw_pdf_content(p, width, height, dossier, officier, timbre_ref, cachet_path, signature_path, cachet_nominal_path, qr_image_reader):
     _draw_watermark(p, width, height)
