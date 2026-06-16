@@ -404,9 +404,16 @@ class DossierViewSet(viewsets.ModelViewSet):
         dossier.completed_at = timezone.now()
         dossier.save(update_fields=['status', 'rejection_reason', 'completed_at', 'updated_at'])
 
+        msg = 'Dossier rejeté.'
+        
+        if serializer.validated_data.get('requires_physical_presence', False):
+            from apps.appointments.services import AppointmentService
+            AppointmentService.create_appointment_for_rejection(dossier)
+            msg = 'Dossier rejeté. Un rendez-vous a été créé pour une présence obligatoire.'
+
         return success_response(
             data=DossierDetailSerializer(dossier).data,
-            message='Dossier rejeté.',
+            message=msg,
         )
 
     @extend_schema(tags=['Dossiers'], summary='Terminer un dossier')

@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/dossiers/', include('apps.dossiers.urls')),
     path('api/documents/', include('apps.documents.urls')),
     path('api/audit-logs/', include('apps.audit_logs.urls')),
+    path('api/appointments/', include('apps.appointments.urls')),
 
     # Stub APIs (for DEV 2)
     path('api/notifications/', include('apps.notifications.urls')),

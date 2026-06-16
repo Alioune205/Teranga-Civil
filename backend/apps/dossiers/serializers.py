@@ -277,3 +277,5 @@ class DossierAssignSerializer(serializers.Serializer):
 class DossierRejectSerializer(serializers.Serializer):
     """Serializer for rejecting a dossier with reason."""
     rejection_reason = serializers.CharField(required=True, min_length=10)
+    requires_physical_presence = serializers.BooleanField(required=False, default=False)
+
