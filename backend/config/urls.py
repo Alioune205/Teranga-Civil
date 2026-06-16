@@ -41,12 +41,12 @@ urlpatterns = [
     # Stub APIs (for DEV 2)
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/qr/', include('apps.qr.urls')),
-    path('api/ai/', include('apps.ai.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/system/', include('apps.system.urls')),
     path('api/services/', include('apps.services.urls')),
-    path('api/', include('apps.payments.urls')),
+    path('api/payments/', include('apps.payments.urls')),
     path('api/attribution/', include('apps.etat_civil.api.attribution_urls')),
+    path('api/ai/', include('apps.ai.urls')),
     path('api/', include('apps.etat_civil.api.citoyen_urls')),
 ]
 

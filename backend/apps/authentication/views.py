@@ -94,21 +94,11 @@ class RegisterView(GenericAPIView):
         OTPCode.objects.create(identifier=identifier, code=code, expires_at=expires_at)
         
         if '@' in identifier:
-            try:
-                from apps.services.communication import SendGridEmailService
-                email_service = SendGridEmailService()
-                html_content = f"<h3>Code de vérification — TERANGA CIVIL</h3><p>Votre code de vérification OTP est : <strong>{code}</strong>.</p><p>Il expire dans 10 minutes.</p>"
-                email_service.send_email(to_email=identifier, subject="Code de vérification — TERANGA CIVIL", html_content=html_content)
-            except Exception as e:
-                # Log but do not fail registration
-                pass
+            from .tasks import send_otp_email_task
+            send_otp_email_task.delay(identifier, code)
         else:
-            try:
-                from apps.services.communication import TwilioSMSService
-                sms_service = TwilioSMSService()
-                sms_service.send_sms(to_phone=identifier, message=f"TERANGA CIVIL: Votre code de vérification OTP est {code}. Valide 10 minutes.")
-            except Exception as e:
-                pass
+            from .tasks import send_otp_sms_task
+            send_otp_sms_task.delay(identifier, code)
 
         return created_response(
             data={
@@ -219,14 +209,11 @@ class SendOTPView(GenericAPIView):
         OTPCode.objects.create(identifier=identifier, code=code, expires_at=expires_at)
         
         if '@' in identifier:
-            from apps.services.communication import SendGridEmailService
-            email_service = SendGridEmailService()
-            html_content = f"<h3>Code de vérification — TERANGA CIVIL</h3><p>Votre code de vérification OTP est : <strong>{code}</strong>.</p><p>Il expire dans 10 minutes.</p>"
-            email_service.send_email(to_email=identifier, subject="Code de vérification — TERANGA CIVIL", html_content=html_content)
+            from .tasks import send_otp_email_task
+            send_otp_email_task.delay(identifier, code)
         else:
-            from apps.services.communication import TwilioSMSService
-            sms_service = TwilioSMSService()
-            sms_service.send_sms(to_phone=identifier, message=f"TERANGA CIVIL: Votre code de vérification OTP est {code}. Valide 10 minutes.")
+            from .tasks import send_otp_sms_task
+            send_otp_sms_task.delay(identifier, code)
 
         return success_response(message='Code OTP envoyé avec succès.')
 
@@ -378,11 +365,9 @@ class SuperAdminOTPRequestView(GenericAPIView):
             expires_at=expires_at
         )
 
-        # Envoyer l'email via SendGrid
-        from apps.services.communication import SendGridEmailService
-        email_service = SendGridEmailService()
-        html_content = f"<h3>Code de validation — Teranga Civil Super Admin</h3><p>Votre code de vérification OTP est : <strong>{otp}</strong>.</p><p>Il expire dans 10 minutes.</p>"
-        email_service.send_email(to_email=email, subject="Code de validation — Teranga Civil Super Admin", html_content=html_content)
+        # Envoyer l'email via Celery
+        from .tasks import send_super_admin_otp_email_task
+        send_super_admin_otp_email_task.delay(email, otp)
 
         # Incrémenter le limiteur
         cache.set(request_key, request_count + 1, timeout=3600) # 1 heure

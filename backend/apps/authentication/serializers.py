@@ -34,6 +34,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         password = attrs.get('password')
 
         if identifier and password:
+            # Normalize Senegalese phone numbers missing the +221 prefix
+            if identifier.isdigit() and len(identifier) == 9:
+                identifier = f"+221{identifier}"
+            elif identifier.startswith('221') and len(identifier) == 12:
+                identifier = f"+{identifier}"
+
             user = User.objects.filter(Q(email=identifier) | Q(phone=identifier)).first()
             if user:
                 attrs[self.username_field] = user.email

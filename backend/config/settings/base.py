@@ -24,8 +24,8 @@ SECRET_KEY = config(
     default='django-insecure-dev-key-change-in-production'
 )
 
-GROQ_API_KEY = config(
-    'GROQ_API_KEY',
+GEMINI_API_KEY = config(
+    'GEMINI_API_KEY',
     default=''
 )
 
@@ -89,13 +89,13 @@ LOCAL_APPS = [
     'apps.audit_logs',
     'apps.notifications',
     'apps.qr',
-    'apps.ai',
     'apps.dashboard',
     'apps.system',
     'apps.integrations',
     'apps.services',
     'apps.payments',
     'apps.etat_civil',
+    'apps.ai',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

@@ -1,1 +1,1 @@
-# AI App
+# This directory is a Python module
