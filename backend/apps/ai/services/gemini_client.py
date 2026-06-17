@@ -75,7 +75,7 @@ def analyze_document_with_gemini(image_obj) -> dict:
            "confidence": 0.95,
            "structured_data": {
                // Si document_type == 'cni' : "nom", "prenom", "numero_cni", "date_naissance", "lieu_naissance", "date_expiration"
-               // Si document_type == 'acte_naissance' : "nom", "prenom", "date_naissance", "lieu_naissance", "pere", "mere"
+               // Si document_type == 'acte_naissance' : "nom", "prenom", "date_naissance", "lieu_naissance", "pere", "mere", "numero_registre" (prends le numéro de registre en chiffres)
                // Si document_type == 'acte_deces' : "nom_defunt", "date_deces", "lieu_deces"
                // Si document_type == 'acte_mariage' : "epoux", "epouse", "date_mariage", "lieu_mariage"
                // Si document_type == 'certificat_residence' : "nom", "prenom", "adresse"
