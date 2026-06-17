@@ -70,16 +70,25 @@ def analyze_document_with_gemini(image_obj) -> dict:
         
         Retourne UNIQUEMENT un objet JSON avec cette structure exacte :
         {
-           "raw_text": "Le texte brut complet lu sur le document. Essaie de le formater au mieux.",
-           "document_type": "acte_naissance" (choisis parmi: acte_naissance, acte_mariage, acte_deces, certificat_residence, cni, inconnu),
+           "document_type": "acte_naissance" (choisis parmi: acte_naissance, acte_mariage, acte_deces, certificat_residence, certificat_celibat, certificat_vie, certificat_prise_en_charge, certificat_heredite, certificat_bonne_vie_moeurs, cni, jugement_suppletif, autorisation_construire, mutation_parcelle, pv_verification, inconnu),
            "confidence": 0.95,
+           "raw_text": "Le texte brut complet lu sur le document.",
            "structured_data": {
-               // Si document_type == 'cni' : "nom", "prenom", "numero_cni", "date_naissance", "lieu_naissance", "date_expiration"
-               // Si document_type == 'acte_naissance' : "nom", "prenom", "date_naissance", "lieu_naissance", "pere", "mere", "numero_registre" (prends le numéro de registre en chiffres)
-               // Si document_type == 'acte_deces' : "nom_defunt", "date_deces", "lieu_deces"
-               // Si document_type == 'acte_mariage' : "epoux", "epouse", "date_mariage", "lieu_mariage"
-               // Si document_type == 'certificat_residence' : "nom", "prenom", "adresse"
+               // Si acte_naissance: "nom", "prenom", "sexe", "date_naissance", "heure_naissance", "lieu_naissance", "pere", "mere", "numero_registre", "annee_registre", "centre_etat_civil"
+               // Si acte_mariage: "epoux", "epouse", "date_mariage", "lieu_mariage", "numero_registre", "annee_registre"
+               // Si acte_deces: "nom_defunt", "prenom_defunt", "date_deces", "heure_deces", "lieu_deces", "numero_registre", "annee_registre"
+               // Si cni: "numero_cni", "nom", "prenom", "date_naissance", "lieu_naissance", "sexe", "nationalite", "date_delivrance", "date_expiration"
+               // Si certificat_residence: "nom", "prenom", "adresse", "date_delivrance"
                // Laisse la valeur vide ("") si le champ est introuvable.
+           },
+           "metadata": {
+               "numero_registre": "",
+               "annee_registre": "",
+               "date_delivrance": "",
+               "centre_etat_civil": "",
+               "commune": "",
+               "departement": "",
+               "region": ""
            }
         }
         """

@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema
 
 from .services.gemini_client import analyze_document_with_gemini
 from .services.validation_engine import validate_extracted_data
+from .services.document_analyzer import analyze_document
 import base64
 from .validators import validate_citizen_document, check_dossier_duplicate
 from .chatbot import chat_orchestrator
@@ -36,7 +37,6 @@ class OcrExtractView(APIView):
         Body : { "image_base64": "data:image/jpeg;base64,...", "dossier_type": "..." }
     """
     permission_classes = [IsAuthenticated]
-    # Accepte multipart (upload fichier) ET JSON (base64 caméra)
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     @extend_schema(tags=['AI & OCR'], summary="Extraire les données d'un document via OCR (upload ou caméra)")
@@ -45,14 +45,12 @@ class OcrExtractView(APIView):
         image_base64 = request.data.get('image_base64')
         file_obj = request.FILES.get('document')
 
-        # ── Vérification : au moins une source d'image est requise ──
         if not file_obj and not image_base64:
             return Response({
                 'error': 'Aucun document fourni.',
                 'hint': 'Envoyez "document" (fichier) ou "image_base64" (caméra).'
             }, status=400)
 
-        # ── Vérification des doublons ──
         if dossier_type:
             duplicate_check = check_dossier_duplicate(request.user, dossier_type)
             if duplicate_check.get('is_duplicate'):
@@ -61,56 +59,28 @@ class OcrExtractView(APIView):
                     'details': duplicate_check
                 }, status=400)
 
-        # ── Extraction selon le mode ──
+        # Extraction selon le mode
         if image_base64:
             source = 'camera'
             if ',' in image_base64:
                 image_base64 = image_base64.split(',')[1]
             image_data = base64.b64decode(image_base64)
-            gemini_result = analyze_document_with_gemini(image_data)
+            result = analyze_document(image_data)
         else:
             source = 'upload'
-            gemini_result = analyze_document_with_gemini(file_obj)
+            result = analyze_document(file_obj)
 
-        raw_text = gemini_result.get('raw_text', '')
-        detected_type = gemini_result.get('document_type', 'inconnu')
-        structured_data = gemini_result.get('structured_data', {})
-        confidence = gemini_result.get('confidence', 0.0)
+        if result['document_type'] == 'cni' and hasattr(request.user, 'profile'):
+            profile_validation = validate_citizen_document(request.user.profile, result['raw_text'])
+            result['validation']['profile_match'] = profile_validation
 
-        logger.info(f"[IA Vision] Document détecté : {detected_type} (Confiance: {confidence})")
-        logger.info(f"[IA Vision] Extraction structurée terminée. Longueur texte brut: {len(raw_text)}")
-        
-        # Validation Métier
-        validation_result = validate_extracted_data(detected_type, structured_data)
-        logger.info(f"[IA] Validation métier : Score={validation_result.get('completeness_score')}")
-
-        # Fallback vers le profil utilisateur si c'est une CNI
-        if detected_type == 'cni' and hasattr(request.user, 'profile'):
-            from .validators import validate_citizen_document
-            profile_validation = validate_citizen_document(request.user.profile, raw_text)
-            validation_result['profile_match'] = profile_validation
-
-        return Response({
-            'success': True,
-            'source': source,
-            'document_type': detected_type,
-            'document_confidence': confidence,
-            'raw_text': raw_text,
-            'structured_data': structured_data,
-            'validation': validation_result
-        })
+        result['source'] = source
+        return Response(result)
 
 
 class OcrCameraView(APIView):
     """
     Endpoint dédié à la capture caméra (WebRTC).
-    Reçoit une image base64 et retourne les données CNI extraites.
-
-    POST /api/ai/ocr/camera/
-    Body (JSON) : {
-        "image_base64": "data:image/jpeg;base64,/9j/...",
-        "dossier_type": "naissance"   (optionnel)
-    }
     """
     permission_classes = [IsAuthenticated]
     parser_classes = (JSONParser,)
@@ -128,28 +98,15 @@ class OcrCameraView(APIView):
         if ',' in image_base64:
             image_base64 = image_base64.split(',')[1]
         image_data = base64.b64decode(image_base64)
-        gemini_result = analyze_document_with_gemini(image_data)
-
-        raw_text = gemini_result.get('raw_text', '')
-        detected_type = gemini_result.get('document_type', 'inconnu')
-        structured_data = gemini_result.get('structured_data', {})
-        confidence = gemini_result.get('confidence', 0.0)
         
-        validation_result = validate_extracted_data(detected_type, structured_data)
+        result = analyze_document(image_data)
 
-        if detected_type == 'cni' and hasattr(request.user, 'profile'):
-            from .validators import validate_citizen_document
-            validation_result['profile_match'] = validate_citizen_document(request.user.profile, raw_text)
+        if result['document_type'] == 'cni' and hasattr(request.user, 'profile'):
+            profile_validation = validate_citizen_document(request.user.profile, result['raw_text'])
+            result['validation']['profile_match'] = profile_validation
 
-        return Response({
-            'success': True,
-            'source': 'camera',
-            'document_type': detected_type,
-            'document_confidence': confidence,
-            'raw_text': raw_text,
-            'structured_data': structured_data,
-            'validation': validation_result
-        })
+        result['source'] = 'camera'
+        return Response(result)
 
 
 class OcrConfirmView(APIView):

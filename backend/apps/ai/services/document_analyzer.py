@@ -1,57 +1,81 @@
-import json
 import logging
-from .llm_client import ask_llama
-from apps.ai.prompts import DETECT_DOCUMENT_TYPE_PROMPT, EXTRACTION_PROMPTS
+import time
+from typing import Any, Dict
+from apps.ai.services.gemini_client import analyze_document_with_gemini
+from apps.ai.services.validation_engine import validate_extracted_data
+from apps.ai.services.procedure_engine import get_compatible_procedures
 
 logger = logging.getLogger(__name__)
 
-def detect_document_type(raw_text: str) -> dict:
+def analyze_document(file_obj_or_bytes: Any, engine: str = "gemini") -> Dict[str, Any]:
     """
-    Utilise Llama 3.3 pour détecter le type du document basé sur le texte OCR.
-    Retourne un dict ex: {"document_type": "acte_naissance", "confidence": 0.95}
+    Couche d'abstraction principale pour l'analyse documentaire.
+    Permet de basculer facilement entre Gemini, EasyOCR, DocTR, etc.
+    Retourne toujours un dictionnaire normalisé.
     """
-    if not raw_text.strip():
-        return {"document_type": "inconnu", "confidence": 0.0}
-
-    user_prompt = f"Voici le texte brut extrait par OCR :\n\n{raw_text}\n\nQuel est le type de ce document ?"
+    start_time = time.time()
     
-    response_str = ask_llama(
-        system_prompt=DETECT_DOCUMENT_TYPE_PROMPT,
-        user_prompt=user_prompt,
-        json_mode=True
-    )
-    
-    try:
-        data = json.loads(response_str)
-        return {
-            "document_type": data.get("document_type", "inconnu"),
-            "confidence": data.get("confidence", 0.0)
-        }
-    except Exception as e:
-        logger.error(f"Erreur de parsing JSON pour la détection de document: {e}")
-        return {"document_type": "inconnu", "confidence": 0.0}
-
-
-def extract_structured_data(document_type: str, raw_text: str) -> dict:
-    """
-    Extrait les données structurées spécifiques au type de document.
-    """
-    if document_type not in EXTRACTION_PROMPTS:
-        logger.warning(f"Pas de prompt d'extraction pour le type: {document_type}")
-        return {}
-
-    system_prompt = EXTRACTION_PROMPTS[document_type]
-    user_prompt = f"Voici le texte brut extrait par OCR :\n\n{raw_text}\n\nExtraits les informations demandées."
-    
-    response_str = ask_llama(
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
-        json_mode=True
-    )
+    # Init du retour par défaut
+    result = {
+        "success": False,
+        "document_type": "inconnu",
+        "confidence": 0.0,
+        "raw_text": "",
+        "structured_data": {},
+        "metadata": {},
+        "validation": {},
+        "usable_for": [],
+        "processing_time": 0.0
+    }
     
     try:
-        data = json.loads(response_str)
-        return data
+        if engine == "gemini":
+            logger.info("[OCR] Démarrage de l'analyse avec Gemini Vision.")
+            gemini_res = analyze_document_with_gemini(file_obj_or_bytes)
+            
+            if not gemini_res:
+                logger.error("[OCR] Échec de l'analyse Gemini.")
+                return result
+                
+            result["document_type"] = gemini_res.get("document_type", "inconnu")
+            result["confidence"] = gemini_res.get("confidence", 0.0)
+            result["raw_text"] = gemini_res.get("raw_text", "")
+            result["structured_data"] = gemini_res.get("structured_data", {})
+            result["metadata"] = gemini_res.get("metadata", {})
+            result["success"] = True
+            
+        elif engine == "easyocr":
+            # Future implémentation avec extract_text_from_file + regex (plus basique)
+            from apps.ai.ocr import extract_text_from_file, extract_cni_data
+            logger.info("[OCR] Démarrage de l'analyse avec EasyOCR.")
+            raw_text = extract_text_from_file(file_obj_or_bytes)
+            result["raw_text"] = raw_text
+            # Basic fallback
+            if "carte nationale" in raw_text.lower():
+                result["document_type"] = "cni"
+                result["structured_data"] = extract_cni_data(file_obj_or_bytes)
+            result["success"] = bool(raw_text)
+            
+        else:
+            logger.error(f"[OCR] Moteur non supporté : {engine}")
+            return result
+            
+        # -- Validation & Procedures --
+        if result["success"]:
+            result["validation"] = validate_extracted_data(result["document_type"], result["structured_data"])
+            result["usable_for"] = get_compatible_procedures(result["document_type"])
+            logger.info(f"[OCR] Analyse terminée avec succès. Type détecté: {result['document_type']}")
+            
+            # Logs Audit
+            if result["validation"].get("is_valid"):
+                logger.info("[OCR] Validation réussie.")
+            else:
+                logger.warning(f"[OCR] Validation échouée: {result['validation'].get('warnings')}")
+
     except Exception as e:
-        logger.error(f"Erreur de parsing JSON pour l'extraction de données: {e}")
-        return {}
+        logger.error(f"[OCR] Erreur critique lors de l'analyse : {str(e)}")
+        
+    finally:
+        result["processing_time"] = round(time.time() - start_time, 2)
+        
+    return result
