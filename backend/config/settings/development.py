@@ -56,6 +56,7 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'user': '10000/hour',
     'login': '100/minute', # Relaxed for dev
     'otp': '100/minute',   # Relaxed for dev
+    'google_maps_api': '10/minute', # Included for dev
 }
 
 # ==============================================================================

@@ -2,7 +2,7 @@
 Serializers for Commune.
 """
 from rest_framework import serializers
-from .models import Commune
+from .models import Commune, Mairie
 
 
 class CommuneSerializer(serializers.ModelSerializer):
@@ -33,3 +33,22 @@ class CommuneListSerializer(serializers.ModelSerializer):
         model = Commune
         fields = ['id', 'name', 'region', 'department', 'code', 'is_active']
         read_only_fields = fields
+
+
+class MairieSerializer(serializers.ModelSerializer):
+    commune_nom = serializers.CharField(source='commune.name', read_only=True)
+    region_nom = serializers.CharField(source='commune.region', read_only=True)
+
+    class Meta:
+        model = Mairie
+        fields = [
+            'id', 'nom', 'commune', 'commune_nom', 'region_nom',
+            'adresse', 'latitude', 'longitude',
+            'telephone', 'email', 'horaires', 'est_active'
+        ]
+
+class MairieAvecDistanceSerializer(MairieSerializer):
+    distance_km = serializers.FloatField(read_only=True)
+
+    class Meta(MairieSerializer.Meta):
+        fields = MairieSerializer.Meta.fields + ['distance_km']

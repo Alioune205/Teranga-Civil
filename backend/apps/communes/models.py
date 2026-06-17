@@ -118,3 +118,29 @@ class Commune(TimeStampedModel):
 
     def __str__(self):
         return f'{self.name} ({self.region})'
+
+
+class Mairie(models.Model):
+    nom = models.CharField(max_length=200)
+    commune = models.ForeignKey(
+        Commune,
+        on_delete=models.CASCADE,
+        related_name='mairies'
+    )
+    adresse = models.CharField(max_length=300, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    telephone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    horaires = models.TextField(blank=True)
+    est_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Mairie"
+        verbose_name_plural = "Mairies"
+        ordering = ['nom']
+
+    def __str__(self):
+        return f"{self.nom} — {self.commune.name}"

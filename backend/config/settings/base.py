@@ -29,6 +29,17 @@ GROQ_API_KEY = config(
     default=''
 )
 
+import os
+from dotenv import load_dotenv
+
+# Charge les variables depuis le fichier .env (si existant)
+load_dotenv()
+
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+if not GOOGLE_MAPS_API_KEY:
+    # Pour ne pas crasher les builds ou migrations si la clé manque
+    print("WARNING: GOOGLE_MAPS_API_KEY manquante dans .env")
+
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
     default='localhost,127.0.0.1',
@@ -305,6 +316,7 @@ REST_FRAMEWORK = {
         'user': '1000/hour',
         'login': '5/minute', # Anti brute-force pour le login
         'otp': '3/minute',   # Anti-spam pour l'envoi d'OTP
+        'google_maps_api': '10/minute', # Protection quota API externe
     },
 
     # Schema
