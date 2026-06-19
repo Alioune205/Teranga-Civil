@@ -1,0 +1,17 @@
+runtime: python311
+
+entrypoint: gunicorn config.wsgi
+
+env_variables:
+  DJANGO_SETTINGS_MODULE: "config.settings.production"
+  SECRET_KEY: "teranga-civil-demo-secret-key-2026"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,concour-teranga-civile.uc.r.appspot.com"
+  DB_NAME: "teranga_civil"
+  DB_USER: "teranga_user"
+  DB_PASSWORD: "TerangaCivil@2026"
+  DB_HOST: "/cloudsql/concour-teranga-civile:us-central1:teranga-civil-db"
+  DB_PORT: "5432"
+  CORS_ALLOWED_ORIGINS: ""
+
+beta_settings:
+  cloud_sql_instances: "concour-teranga-civile:us-central1:teranga-civil-db"
